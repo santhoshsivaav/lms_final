@@ -1,0 +1,50 @@
+{
+  "_id": {
+    "$oid": "6836aba5dcb86d1b24301926"
+  },
+  "title": "Web Development Bootcamp",
+  "description": "Learn web development from scratch",
+  "thumbnail": "https://example.com/thumbnail.jpg",
+  "tags": [
+    "web",
+    "development",
+    "javascript"
+  ],
+  "skills": [
+    "HTML",
+    "CSS",
+    "JavaScript"
+  ],
+  "modules": [
+    {
+      "title": "Introduction to Web Development",
+      "description": "Learn the basics of web development",
+      "order": 1,
+      "lessons": [
+        {
+          "title": "What is Web Development?",
+          "description": "An overview of web development",
+          "type": "video",
+          "content": {
+            "videoUrl": "https://example.com/video1.mp4"
+          },
+          "order": 1,
+          "_id": {
+            "$oid": "6836aba5dcb86d1b24301928"
+          }
+        }
+      ],
+      "_id": {
+        "$oid": "6836aba5dcb86d1b24301927"
+      }
+    }
+  ],
+  "status": "draft",
+  "createdAt": {
+    "$date": "2025-05-28T06:22:29.051Z"
+  },
+  "updatedAt": {
+    "$date": "2025-05-28T06:22:29.051Z"
+  },
+  "__v": 0
+}

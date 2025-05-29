@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "expo-screen-capture": "^7.1.4",
+    "mongoose": "^8.15.0",
+    "react-native-snap-carousel": "^3.9.1",
+    "react-native-webview": "^13.13.5"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
+    "@types/node": "^22.15.17",
+    "ts-node": "^10.9.2"
+  }
+}

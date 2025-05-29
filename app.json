@@ -1,0 +1,10 @@
+{
+    "expo": {
+        "icon": "./assets/logo.png",
+        "splash": {
+            "image": "./assets/logo.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#ffffff"
+        }
+    }
+}
