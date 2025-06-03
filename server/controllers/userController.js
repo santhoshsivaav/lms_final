@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Category = require('../models/Category');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -7,12 +8,24 @@ const jwt = require('jsonwebtoken');
  */
 const register = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, preferredCategories } = req.body;
 
         // Check if user already exists
-        const userExists = await User.findOne({ email });
-        if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: 'User already exists' });
+        }
+
+        // Validate categories if provided
+        if (preferredCategories && preferredCategories.length > 0) {
+            const validCategories = await Category.find({
+                _id: { $in: preferredCategories },
+                isActive: true
+            });
+
+            if (validCategories.length !== preferredCategories.length) {
+                return res.status(400).json({ success: false, message: 'One or more invalid categories' });
+            }
         }
 
         // Hash password
@@ -20,30 +33,39 @@ const register = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
 
         // Create user
-        const user = await User.create({
+        const user = new User({
             name,
             email,
             password: hashedPassword,
-            role: 'user'
+            role: 'user',
+            preferredCategories: preferredCategories || []
         });
+
+        await user.save();
 
         // Generate token
         const token = jwt.sign(
-            { id: user._id },
+            { id: user._id, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '30d' }
+            { expiresIn: '7d' }
         );
 
         res.status(201).json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            token,
+            success: true,
+            data: {
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    preferredCategories: user.preferredCategories
+                },
+                token
+            }
         });
     } catch (error) {
         console.error('Error registering user:', error);
-        res.status(500).json({ message: 'Failed to register user' });
+        res.status(500).json({ success: false, message: 'Error registering user' });
     }
 };
 
@@ -205,6 +227,52 @@ const deleteUser = async (req, res) => {
     }
 };
 
+/**
+ * Update user preferences
+ */
+const updatePreferences = async (req, res) => {
+    try {
+        const { preferredCategories } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // Validate categories if provided
+        if (preferredCategories && preferredCategories.length > 0) {
+            const validCategories = await Category.find({
+                _id: { $in: preferredCategories },
+                isActive: true
+            });
+
+            if (validCategories.length !== preferredCategories.length) {
+                return res.status(400).json({ success: false, message: 'One or more invalid categories' });
+            }
+
+            user.preferredCategories = preferredCategories;
+        }
+
+        await user.save();
+
+        res.json({
+            success: true,
+            data: {
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    preferredCategories: user.preferredCategories
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error updating user preferences:', error);
+        res.status(500).json({ success: false, message: 'Error updating user preferences' });
+    }
+};
+
 module.exports = {
     register,
     login,
@@ -213,4 +281,5 @@ module.exports = {
     getAllUsers,
     updateUser,
     deleteUser,
+    updatePreferences,
 }; 

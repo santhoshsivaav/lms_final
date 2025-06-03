@@ -17,14 +17,14 @@ import { Video } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { courseService } from '../../services/courseService';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext } from '../../contexts/AuthContext';
 import * as ScreenCapture from 'expo-screen-capture';
 import { COLORS } from '../../utils/theme';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useFocusEffect } from '@react-navigation/native';
 
 const VideoPlayerScreen = ({ navigation, route }) => {
-    const { courseId, videoId, videoTitle } = route.params;
+    const { courseId, lessonId, title } = route.params;
     const [video, setVideo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -81,15 +81,15 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                 }
 
                 // Validate required parameters
-                if (!courseId || !videoId) {
-                    console.error('Missing required parameters:', { courseId, videoId });
+                if (!courseId || !lessonId) {
+                    console.error('Missing required parameters:', { courseId, lessonId });
                     setError('Invalid video parameters');
                     setLoading(false);
                     return;
                 }
 
-                console.log('Fetching video details for:', { courseId, videoId });
-                const response = await courseService.getVideoPlayerUrl(courseId, videoId);
+                console.log('Fetching video details for:', { courseId, lessonId });
+                const response = await courseService.getVideoPlayerUrl(courseId, lessonId);
                 console.log('Video details response:', response);
 
                 if (!response) {
@@ -149,7 +149,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                 clearInterval(progressInterval.current);
             }
         };
-    }, [courseId, videoId, user]);
+    }, [courseId, lessonId, user]);
 
     // Save progress periodically
     useEffect(() => {
@@ -189,11 +189,11 @@ const VideoPlayerScreen = ({ navigation, route }) => {
 
             // Mark as completed if watched more than 90%
             if (progressPercent > 90 && !isCompleted) {
-                await courseService.markVideoCompleted(videoId);
+                await courseService.markVideoCompleted(lessonId);
                 setIsCompleted(true);
             } else {
                 // Just update the current position
-                await courseService.updateVideoProgress(videoId, status.positionMillis);
+                await courseService.updateVideoProgress(lessonId, status.positionMillis);
             }
         } catch (err) {
             console.error('Error saving progress:', err);
@@ -214,7 +214,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
 
     const markVideoCompleted = async () => {
         try {
-            await courseService.markVideoCompleted(videoId);
+            await courseService.markVideoCompleted(lessonId);
             setIsCompleted(true);
         } catch (err) {
             console.error('Error marking video as completed:', err);
@@ -377,7 +377,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                 >
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle} numberOfLines={1}>{videoTitle || video?.title}</Text>
+                <Text style={styles.headerTitle} numberOfLines={1}>{title || video?.title}</Text>
 
                 {isCompleted && (
                     <View style={styles.completedBadge}>

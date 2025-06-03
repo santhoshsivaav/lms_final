@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { courseService } from '../../api/courseService';
 import { SubscriptionContext } from '../../context/SubscriptionContext';
 import { AuthContext } from '../../context/AuthContext';
-import { COLORS } from '../../constants/Colors';
+import { COLORS } from '../../utils/theme';
 
 const LessonCard = ({ lesson, onPress, isLocked }) => {
     return (
@@ -94,8 +94,8 @@ const CourseDetailScreen = ({ route, navigation }) => {
         });
         navigation.navigate('VideoPlayer', {
             courseId,
-            videoId: lesson._id,
-            videoTitle: lesson.title
+            lessonId: lesson._id,
+            title: lesson.title
         });
     };
 

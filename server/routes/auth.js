@@ -21,6 +21,50 @@ const validateLogin = [
     body('password').notEmpty().withMessage('Password is required')
 ];
 
+// Create first admin user if none exists
+router.post('/create-first-admin', async (req, res) => {
+    try {
+        // Check if any admin exists
+        const adminExists = await User.findOne({ role: 'admin' });
+        if (adminExists) {
+            return res.status(400).json({ message: 'Admin user already exists' });
+        }
+
+        // Create admin user
+        const admin = new User({
+            name: 'Admin User',
+            email: 'admin@example.com',
+            password: 'admin123',
+            role: 'admin',
+            isAdmin: true
+        });
+
+        await admin.save();
+
+        // Generate token
+        const token = jwt.sign(
+            { id: admin._id },
+            process.env.JWT_SECRET || 'your_jwt_secret_key_here',
+            { expiresIn: '30d' }
+        );
+
+        res.status(201).json({
+            message: 'Admin user created successfully',
+            token,
+            user: {
+                id: admin._id,
+                name: admin.name,
+                email: admin.email,
+                role: admin.role,
+                isAdmin: admin.isAdmin
+            }
+        });
+    } catch (err) {
+        console.error('Create admin error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Register user
 router.post('/register', validateRegistration, async (req, res) => {
     try {
@@ -30,7 +74,7 @@ router.post('/register', validateRegistration, async (req, res) => {
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { name, email, password } = req.body;
+        const { name, email, password, preferredCategories } = req.body;
 
         // Check if user exists
         let user = await User.findOne({ email });
@@ -42,7 +86,8 @@ router.post('/register', validateRegistration, async (req, res) => {
         user = new User({
             name,
             email,
-            password
+            password,
+            preferredCategories: preferredCategories || []
         });
 
         await user.save();
@@ -61,7 +106,8 @@ router.post('/register', validateRegistration, async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                isSubscribed: user.hasActiveSubscription()
+                isSubscribed: user.hasActiveSubscription(),
+                preferredCategories: user.preferredCategories
             }
         });
     } catch (err) {

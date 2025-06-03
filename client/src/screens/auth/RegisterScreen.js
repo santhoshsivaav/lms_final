@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import {
     View,
     Text,
@@ -11,18 +11,49 @@ import {
     Keyboard,
     ActivityIndicator,
     Alert,
-    ScrollView
+    ScrollView,
+    FlatList
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AuthContext } from '../../context/AuthContext';
+import { categoryService } from '../../services/categoryService';
 
 const RegisterScreen = ({ navigation }) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [categories, setCategories] = useState([]);
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [loading, setLoading] = useState(false);
 
     const { register, isLoading, error } = useContext(AuthContext);
+
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    const fetchCategories = async () => {
+        try {
+            const response = await categoryService.getAllCategories();
+            if (response.success) {
+                setCategories(response.data);
+            }
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            Alert.alert('Error', 'Failed to fetch categories');
+        }
+    };
+
+    const toggleCategory = (categoryId) => {
+        setSelectedCategories(prev => {
+            if (prev.includes(categoryId)) {
+                return prev.filter(id => id !== categoryId);
+            } else {
+                return [...prev, categoryId];
+            }
+        });
+    };
 
     const handleRegister = async () => {
         // Validate inputs
@@ -36,9 +67,13 @@ const RegisterScreen = ({ navigation }) => {
             return;
         }
 
-        try {
-            const success = await register(name, email, password);
+        if (selectedCategories.length === 0) {
+            Alert.alert('Error', 'Please select at least one category');
+            return;
+        }
 
+        try {
+            const success = await register(name, email, password, selectedCategories);
             if (!success) {
                 Alert.alert('Registration Failed', error || 'An error occurred during registration');
             }
@@ -47,6 +82,23 @@ const RegisterScreen = ({ navigation }) => {
             Alert.alert('Registration Failed', err.message || 'An error occurred during registration');
         }
     };
+
+    const renderCategoryItem = ({ item }) => (
+        <TouchableOpacity
+            style={[
+                styles.categoryItem,
+                selectedCategories.includes(item._id) && styles.selectedCategory
+            ]}
+            onPress={() => toggleCategory(item._id)}
+        >
+            <Text style={[
+                styles.categoryText,
+                selectedCategories.includes(item._id) && styles.selectedCategoryText
+            ]}>
+                {item.name}
+            </Text>
+        </TouchableOpacity>
+    );
 
     return (
         <KeyboardAvoidingView
@@ -112,6 +164,18 @@ const RegisterScreen = ({ navigation }) => {
                                     value={confirmPassword}
                                     onChangeText={setConfirmPassword}
                                     secureTextEntry
+                                />
+                            </View>
+
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>Select Categories</Text>
+                                <FlatList
+                                    data={categories}
+                                    renderItem={renderCategoryItem}
+                                    keyExtractor={item => item._id}
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.categoriesList}
                                 />
                             </View>
 
@@ -190,6 +254,29 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         padding: 15,
         fontSize: 16,
+    },
+    categoriesList: {
+        marginTop: 10,
+    },
+    categoryItem: {
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+        backgroundColor: '#f0f0f0',
+        marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#ddd',
+    },
+    selectedCategory: {
+        backgroundColor: '#3498db',
+        borderColor: '#3498db',
+    },
+    categoryText: {
+        fontSize: 14,
+        color: '#2c3e50',
+    },
+    selectedCategoryText: {
+        color: '#fff',
     },
     registerButton: {
         backgroundColor: '#3498db',

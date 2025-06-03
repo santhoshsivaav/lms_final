@@ -2,7 +2,7 @@
 // In a real app, these would be loaded from environment variables
 
 // API Configuration
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.230.119:5000/api';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.75.119:5000/api';
 
 // App Configuration
 export const APP_CONFIG = {

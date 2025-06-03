@@ -42,8 +42,11 @@ const Dashboard = () => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        role: 'user'
+        password: '',
+        role: 'user',
+        preferredCategories: []
     });
+    const [categories, setCategories] = useState([]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -53,16 +56,25 @@ const Dashboard = () => {
         }
         if (value === 0) {
             fetchUsers();
+            fetchCategories();
         }
     }, [navigate, value]);
 
     const fetchUsers = async () => {
         try {
-            const response = await fetch('http://192.168.230.119:5000/api/allusers', {
+            const response = await fetch('http://192.168.75.119:5000/api/allusers', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
                 },
+                credentials: 'include'
             });
+
+            if (response.status === 429) {
+                // Rate limit exceeded, wait and retry
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return fetchUsers();
+            }
 
             if (response.ok) {
                 const result = await response.json();
@@ -77,6 +89,7 @@ const Dashboard = () => {
                 setUsers([]);
             }
         } catch (err) {
+            console.error('Error fetching users:', err);
             setError('An error occurred while fetching users');
             setUsers([]);
         } finally {
@@ -84,8 +97,40 @@ const Dashboard = () => {
         }
     };
 
+    const fetchCategories = async () => {
+        try {
+            const response = await fetch('http://192.168.75.119:5000/api/categories', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include'
+            });
+
+            if (response.status === 429) {
+                // Rate limit exceeded, wait and retry
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return fetchCategories();
+            }
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && Array.isArray(result.data)) {
+                    setCategories(result.data);
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching categories:', err);
+        }
+    };
+
     const handleTabChange = (event, newValue) => {
         setValue(newValue);
+        if (newValue === 1) {
+            navigate('/courses');
+        } else if (newValue === 2) {
+            navigate('/categories');
+        }
     };
 
     const handleOpenDialog = (user = null) => {
@@ -94,14 +139,18 @@ const Dashboard = () => {
             setFormData({
                 name: user.name,
                 email: user.email,
-                role: user.role
+                password: '',
+                role: user.role,
+                preferredCategories: user.preferredCategories || []
             });
         } else {
             setEditingUser(null);
             setFormData({
                 name: '',
                 email: '',
-                role: 'user'
+                password: '',
+                role: 'user',
+                preferredCategories: []
             });
         }
         setOpenDialog(true);
@@ -113,15 +162,28 @@ const Dashboard = () => {
         setFormData({
             name: '',
             email: '',
-            role: 'user'
+            password: '',
+            role: 'user',
+            preferredCategories: []
         });
     };
 
     const handleSubmit = async () => {
         try {
             const url = editingUser
-                ? `http://192.168.230.119:5000/api/users/${editingUser._id}`
-                : 'http://192.168.230.119:5000/api/users';
+                ? `http://192.168.75.119:5000/api/users/${editingUser._id}`
+                : 'http://192.168.75.119:5000/api/auth/register';
+
+            // Prepare the data to send
+            const userData = {
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                role: formData.role,
+                preferredCategories: formData.preferredCategories.map(catId => catId.toString())
+            };
+
+            console.log('Sending user data:', userData); // Debug log
 
             const response = await fetch(url, {
                 method: editingUser ? 'PUT' : 'POST',
@@ -129,7 +191,7 @@ const Dashboard = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(userData),
             });
 
             if (response.ok) {
@@ -162,6 +224,7 @@ const Dashboard = () => {
                 <Tabs value={value} onChange={handleTabChange}>
                     <Tab label="Users" />
                     <Tab label="Courses" />
+                    <Tab label="Categories" />
                     <Tab label="Settings" />
                 </Tabs>
             </Box>
@@ -186,6 +249,7 @@ const Dashboard = () => {
                                     <TableCell>Name</TableCell>
                                     <TableCell>Email</TableCell>
                                     <TableCell>Role</TableCell>
+                                    <TableCell>Preferred Categories</TableCell>
                                     <TableCell>Actions</TableCell>
                                 </TableRow>
                             </TableHead>
@@ -195,6 +259,14 @@ const Dashboard = () => {
                                         <TableCell>{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>{user.role}</TableCell>
+                                        <TableCell>
+                                            {user.preferredCategories && user.preferredCategories.length > 0
+                                                ? categories
+                                                    .filter(cat => user.preferredCategories.includes(cat._id))
+                                                    .map(cat => cat.name)
+                                                    .join(', ')
+                                                : 'None'}
+                                        </TableCell>
                                         <TableCell>
                                             <IconButton
                                                 onClick={() => handleOpenDialog(user)}
@@ -216,11 +288,13 @@ const Dashboard = () => {
 
             {value === 1 && <Courses />}
 
-            {value === 2 && (
-                <Paper elevation={3} sx={{ p: 3 }}>
-                    <Typography variant="h6">Settings</Typography>
+            {value === 3 && (
+                <Box sx={{ p: 3 }}>
+                    <Typography variant="h5" gutterBottom>
+                        Settings
+                    </Typography>
                     {/* Add settings content here */}
-                </Paper>
+                </Box>
             )}
 
             <Dialog open={openDialog} onClose={handleCloseDialog}>
@@ -244,7 +318,16 @@ const Dashboard = () => {
                             onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                             sx={{ mb: 2 }}
                         />
-                        <FormControl fullWidth>
+                        <TextField
+                            fullWidth
+                            label="Password"
+                            type="password"
+                            value={formData.password}
+                            onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                            helperText={!editingUser ? "Password must be at least 6 characters long and contain a number" : "Leave blank to keep current password"}
+                            sx={{ mb: 2 }}
+                        />
+                        <FormControl fullWidth sx={{ mb: 2 }}>
                             <InputLabel>Role</InputLabel>
                             <Select
                                 value={formData.role}
@@ -255,6 +338,31 @@ const Dashboard = () => {
                                 <MenuItem value="admin">Admin</MenuItem>
                             </Select>
                         </FormControl>
+                        <FormControl fullWidth>
+                            <InputLabel>Preferred Categories</InputLabel>
+                            <Select
+                                multiple
+                                value={formData.preferredCategories}
+                                label="Preferred Categories"
+                                onChange={(e) => {
+                                    console.log('Selected categories:', e.target.value); // Debug log
+                                    setFormData(prev => ({ ...prev, preferredCategories: e.target.value }));
+                                }}
+                                renderValue={(selected) => {
+                                    const selectedCategories = categories
+                                        .filter(cat => selected.includes(cat._id))
+                                        .map(cat => cat.name)
+                                        .join(', ');
+                                    return selectedCategories;
+                                }}
+                            >
+                                {categories.map((category) => (
+                                    <MenuItem key={category._id} value={category._id}>
+                                        {category.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                     </Box>
                 </DialogContent>
                 <DialogActions>
@@ -262,7 +370,7 @@ const Dashboard = () => {
                     <Button
                         onClick={handleSubmit}
                         variant="contained"
-                        disabled={!formData.name || !formData.email}
+                        disabled={!formData.name || !formData.email || (!editingUser && !formData.password)}
                     >
                         {editingUser ? 'Update' : 'Create'}
                     </Button>

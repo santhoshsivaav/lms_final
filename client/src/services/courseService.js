@@ -139,10 +139,79 @@ export const courseService = {
             if (!response.data.success) {
                 throw new Error(response.data.message || 'Failed to fetch video player URL');
             }
+
+            // Ensure we have a video URL in the response
+            if (!response.data.data?.videoUrl) {
+                throw new Error('No video URL found in the response');
+            }
+
             return response.data.data;
         } catch (error) {
             console.error('Error in getVideoPlayerUrl:', error);
+            if (error.response?.status === 401) {
+                throw new Error('Please log in to access this video');
+            }
             throw error;
+        }
+    },
+
+    // Get courses by category
+    getCoursesByCategory: async (categoryId) => {
+        try {
+            const response = await api.get(`/courses/category/${categoryId}`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    // Get recommended courses based on user's preferred categories
+    getRecommendedCourses: async () => {
+        try {
+            const response = await api.get('/courses/recommended');
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    // Create new course (admin only)
+    createCourse: async (courseData) => {
+        try {
+            const response = await api.post('/courses', courseData);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    // Update course (admin only)
+    updateCourse: async (id, courseData) => {
+        try {
+            const response = await api.put(`/courses/${id}`, courseData);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    // Delete course (admin only)
+    deleteCourse: async (id) => {
+        try {
+            const response = await api.delete(`/courses/${id}`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
+        }
+    },
+
+    // Enroll in course
+    enrollInCourse: async (courseId) => {
+        try {
+            const response = await api.post(`/courses/${courseId}/enroll`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error.message;
         }
     }
 }; 

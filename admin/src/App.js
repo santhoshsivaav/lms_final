@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Courses from './pages/Courses';
+import Categories from './pages/Categories';
 
 const theme = createTheme({
     palette: {
@@ -43,6 +44,14 @@ function App() {
                         element={
                             <PrivateRoute>
                                 <Courses />
+                            </PrivateRoute>
+                        }
+                    />
+                    <Route
+                        path="/categories"
+                        element={
+                            <PrivateRoute>
+                                <Categories />
                             </PrivateRoute>
                         }
                     />

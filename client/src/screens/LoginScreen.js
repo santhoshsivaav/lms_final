@@ -11,6 +11,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL } from '../config';
 import { getDeviceInfo } from '../utils/deviceUtils';
+import { authService } from '../services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
@@ -68,8 +70,15 @@ const LoginScreen = ({ navigation }) => {
                 return;
             }
 
-            // Login successful
-            await login(data.data.token, data.data.user);
+            // Login successful - store the token and user data
+            if (data.data && data.data.token && data.data.user) {
+                await AsyncStorage.setItem('user', JSON.stringify(data.data.user));
+                await AsyncStorage.setItem('token', data.data.token);
+                // Update the auth context
+                await login(data.data.token, data.data.user);
+            } else {
+                throw new Error('Invalid response format');
+            }
         } catch (error) {
             console.error('Login error:', error);
             Alert.alert('Error', error.message || 'Login failed');

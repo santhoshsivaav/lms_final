@@ -49,10 +49,10 @@ api.interceptors.response.use(
                     if (response.data.token) {
                         // Save the new token
                         await SecureStore.setItemAsync('authToken', response.data.token);
-                        
+
                         // Update the original request with the new token
                         originalRequest.headers.Authorization = `Bearer ${response.data.token}`;
-                        
+
                         // Retry the original request
                         return api(originalRequest);
                     }

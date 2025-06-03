@@ -14,13 +14,14 @@ import {
     BackHandler
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { COLORS } from '../../utils/theme';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const { login, isLoading, error } = useContext(AuthContext);
+    const { login, isLoading, error } = useAuth();
 
     useFocusEffect(
         useCallback(() => {
@@ -42,7 +43,11 @@ const LoginScreen = ({ navigation }) => {
 
         try {
             const success = await login(email, password);
-            if (!success && error) {
+            if (success) {
+                // The AppNavigator will automatically handle the navigation
+                // based on the userToken state change
+                console.log('Login successful, redirecting...');
+            } else if (error) {
                 Alert.alert('Login Failed', error);
             }
         } catch (err) {
@@ -59,61 +64,49 @@ const LoginScreen = ({ navigation }) => {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.inner}>
                     <StatusBar style="dark" />
+                    <Text style={styles.title}>Welcome Back</Text>
+                    <Text style={styles.subtitle}>Sign in to continue</Text>
 
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text style={styles.backButtonText}>← Back</Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.headerContainer}>
-                        <Text style={styles.headerText}>Welcome Back</Text>
-                        <Text style={styles.subHeaderText}>Login to your account</Text>
-                    </View>
-
-                    <View style={styles.formContainer}>
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Email</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your email"
-                                value={email}
-                                onChangeText={setEmail}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                            />
-                        </View>
-
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Password</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter your password"
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry
-                            />
-                        </View>
+                    <View style={styles.form}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoComplete="email"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Password"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                            autoCapitalize="none"
+                            autoComplete="password"
+                        />
 
                         <TouchableOpacity
-                            style={styles.loginButton}
+                            style={styles.button}
                             onPress={handleLogin}
                             disabled={isLoading}
                         >
                             {isLoading ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
-                                <Text style={styles.loginButtonText}>Login</Text>
+                                <Text style={styles.buttonText}>Sign In</Text>
                             )}
                         </TouchableOpacity>
 
-                        <View style={styles.registerContainer}>
-                            <Text style={styles.registerText}>Don't have an account? </Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                                <Text style={styles.registerLink}>Register</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            style={styles.registerButton}
+                            onPress={() => navigation.navigate('Register')}
+                        >
+                            <Text style={styles.registerText}>
+                                Don't have an account? <Text style={styles.registerTextBold}>Sign Up</Text>
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </TouchableWithoutFeedback>
@@ -128,70 +121,52 @@ const styles = StyleSheet.create({
     },
     inner: {
         flex: 1,
-        padding: 20,
+        padding: 24,
+        justifyContent: 'center',
     },
-    backButton: {
-        marginTop: 40,
-        marginBottom: 20,
-    },
-    backButtonText: {
-        fontSize: 16,
-        color: '#3498db',
-    },
-    headerContainer: {
-        marginBottom: 40,
-    },
-    headerText: {
-        fontSize: 30,
+    title: {
+        fontSize: 32,
         fontWeight: 'bold',
-        marginBottom: 10,
-    },
-    subHeaderText: {
-        fontSize: 16,
-        color: '#7f8c8d',
-    },
-    formContainer: {
-        flex: 1,
-    },
-    inputContainer: {
-        marginBottom: 20,
-    },
-    label: {
-        fontSize: 16,
         marginBottom: 8,
-        color: '#2c3e50',
+        color: '#000',
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 32,
+    },
+    form: {
+        width: '100%',
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 10,
-        padding: 15,
+        backgroundColor: '#f5f5f5',
+        padding: 16,
+        borderRadius: 8,
+        marginBottom: 16,
         fontSize: 16,
     },
-    loginButton: {
-        backgroundColor: '#3498db',
-        paddingVertical: 15,
-        borderRadius: 10,
+    button: {
+        backgroundColor: COLORS.primary,
+        padding: 16,
+        borderRadius: 8,
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: 8,
     },
-    loginButtonText: {
+    buttonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
     },
-    registerContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 20,
+    registerButton: {
+        marginTop: 24,
+        alignItems: 'center',
     },
     registerText: {
-        fontSize: 16,
-        color: '#7f8c8d',
+        fontSize: 14,
+        color: '#666',
     },
-    registerLink: {
-        fontSize: 16,
-        color: '#3498db',
+    registerTextBold: {
+        color: COLORS.primary,
         fontWeight: '600',
     },
 });

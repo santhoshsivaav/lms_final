@@ -1,5 +1,5 @@
 const axios = require('axios');
-const API_URL = 'http://192.168.230.119:5000/api';
+const API_URL = 'http://192.168.75.119:5000/api';
 
 // Test user credentials
 const testUser = {

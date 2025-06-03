@@ -30,6 +30,10 @@ import {
     CardContent,
     CardMedia,
     CardActions,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -46,10 +50,12 @@ const Courses = () => {
     const [editingCourse, setEditingCourse] = useState(null);
     const [successMessage, setSuccessMessage] = useState('');
     const [showSuccess, setShowSuccess] = useState(false);
+    const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         thumbnail: '',
+        category: '',
         tags: [],
         skills: [],
         modules: []
@@ -78,12 +84,13 @@ const Courses = () => {
 
     useEffect(() => {
         fetchCourses();
+        fetchCategories();
     }, []);
 
     const fetchCourses = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://192.168.230.119:5000/api/courses', {
+            const response = await fetch('http://192.168.75.119:5000/api/courses', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -115,6 +122,23 @@ const Courses = () => {
         }
     };
 
+    const fetchCategories = async () => {
+        try {
+            const response = await fetch('http://192.168.75.119:5000/api/categories', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                },
+            });
+
+            const result = await response.json();
+            if (response.ok && result.success) {
+                setCategories(result.data);
+            }
+        } catch (err) {
+            console.error('Error fetching categories:', err);
+        }
+    };
+
     const handleOpenDialog = (course = null) => {
         if (course) {
             setEditingCourse(course);
@@ -122,22 +146,10 @@ const Courses = () => {
                 title: course.title || '',
                 description: course.description || '',
                 thumbnail: course.thumbnail || '',
+                category: course.category?._id || '',
                 tags: course.tags || [],
                 skills: course.skills || [],
-                modules: course.modules ? course.modules.map(module => ({
-                    title: module.title || '',
-                    description: module.description || '',
-                    order: module.order || 1,
-                    lessons: module.lessons ? module.lessons.map(lesson => ({
-                        title: lesson.title || '',
-                        description: lesson.description || '',
-                        type: lesson.type || 'video',
-                        content: {
-                            videoUrl: lesson.content?.videoUrl || ''
-                        },
-                        order: lesson.order || 1
-                    })) : []
-                })) : []
+                modules: course.modules || []
             });
         } else {
             setEditingCourse(null);
@@ -145,6 +157,7 @@ const Courses = () => {
                 title: '',
                 description: '',
                 thumbnail: '',
+                category: '',
                 tags: [],
                 skills: [],
                 modules: []
@@ -160,6 +173,7 @@ const Courses = () => {
             title: '',
             description: '',
             thumbnail: '',
+            category: '',
             tags: [],
             skills: [],
             modules: []
@@ -462,6 +476,7 @@ const Courses = () => {
                 title: formData.title,
                 description: formData.description,
                 thumbnail: formData.thumbnail,
+                category: formData.category,
                 tags: formData.tags,
                 skills: formData.skills,
                 modules: formData.modules.map((module, index) => ({
@@ -481,8 +496,8 @@ const Courses = () => {
             };
 
             const url = editingCourse
-                ? `http://192.168.230.119:5000/api/courses/${editingCourse._id}`
-                : 'http://192.168.230.119:5000/api/courses';
+                ? `http://192.168.75.119:5000/api/courses/${editingCourse._id}`
+                : 'http://192.168.75.119:5000/api/courses';
 
             console.log('Submitting course data:', formattedData);
 
@@ -681,152 +696,229 @@ const Courses = () => {
                     {editingCourse ? 'Edit Course' : 'Create New Course'}
                 </DialogTitle>
                 <DialogContent>
-                    <Box sx={{ mt: 2 }}>
-                        <Typography variant="h6" gutterBottom>Course Details</Typography>
-                        <TextField
-                            fullWidth
-                            label="Course Title"
-                            value={formData.title}
-                            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                            sx={{ mb: 2 }}
-                        />
-                        <TextField
-                            fullWidth
-                            label="Course Description"
-                            multiline
-                            rows={4}
-                            value={formData.description}
-                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                            sx={{ mb: 2 }}
-                        />
-
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle1" gutterBottom>Course Thumbnail</Typography>
-                            <input
-                                accept="image/*"
-                                type="file"
-                                id="thumbnail-upload"
-                                onChange={handleThumbnailChange}
-                                style={{ display: 'none' }}
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12}>
+                            <TextField
+                                label="Title"
+                                fullWidth
+                                value={formData.title}
+                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             />
-                            <label htmlFor="thumbnail-upload">
-                                <Button
-                                    variant="outlined"
-                                    component="span"
-                                    disabled={uploading}
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField
+                                label="Description"
+                                fullWidth
+                                multiline
+                                rows={4}
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <FormControl fullWidth>
+                                <InputLabel>Category</InputLabel>
+                                <Select
+                                    value={formData.category}
+                                    label="Category"
+                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                 >
-                                    {uploading ? 'Uploading...' : 'Upload Thumbnail'}
-                                </Button>
-                            </label>
-                            {formData.thumbnail && (
+                                    {categories.map((category) => (
+                                        <MenuItem key={category._id} value={category._id}>
+                                            {category.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle1" gutterBottom>Course Thumbnail</Typography>
+                                <input
+                                    accept="image/*"
+                                    type="file"
+                                    id="thumbnail-upload"
+                                    onChange={handleThumbnailChange}
+                                    style={{ display: 'none' }}
+                                />
+                                <label htmlFor="thumbnail-upload">
+                                    <Button
+                                        variant="outlined"
+                                        component="span"
+                                        disabled={uploading}
+                                    >
+                                        {uploading ? 'Uploading...' : 'Upload Thumbnail'}
+                                    </Button>
+                                </label>
+                                {formData.thumbnail && (
+                                    <Box sx={{ mt: 1 }}>
+                                        <img
+                                            src={formData.thumbnail}
+                                            alt="Thumbnail preview"
+                                            style={{ maxWidth: '200px', maxHeight: '200px' }}
+                                        />
+                                    </Box>
+                                )}
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle1" gutterBottom>Course Tags</Typography>
+                                <TextField
+                                    label="Add Tag"
+                                    value={currentTag}
+                                    onChange={(e) => setCurrentTag(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                                    sx={{ mr: 1 }}
+                                />
+                                <Button onClick={handleAddTag}>Add Tag</Button>
                                 <Box sx={{ mt: 1 }}>
-                                    <img
-                                        src={formData.thumbnail}
-                                        alt="Thumbnail preview"
-                                        style={{ maxWidth: '200px', maxHeight: '200px' }}
-                                    />
+                                    {formData.tags.map((tag) => (
+                                        <Chip
+                                            key={tag}
+                                            label={tag}
+                                            onDelete={() => handleRemoveTag(tag)}
+                                            sx={{ mr: 0.5, mb: 0.5 }}
+                                        />
+                                    ))}
                                 </Box>
-                            )}
-                        </Box>
-
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle1" gutterBottom>Course Tags</Typography>
-                            <TextField
-                                label="Add Tag"
-                                value={currentTag}
-                                onChange={(e) => setCurrentTag(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                                sx={{ mr: 1 }}
-                            />
-                            <Button onClick={handleAddTag}>Add Tag</Button>
-                            <Box sx={{ mt: 1 }}>
-                                {formData.tags.map((tag) => (
-                                    <Chip
-                                        key={tag}
-                                        label={tag}
-                                        onDelete={() => handleRemoveTag(tag)}
-                                        sx={{ mr: 0.5, mb: 0.5 }}
-                                    />
-                                ))}
                             </Box>
-                        </Box>
-
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle1" gutterBottom>Required Skills</Typography>
-                            <TextField
-                                label="Add Skill"
-                                value={currentSkill}
-                                onChange={(e) => setCurrentSkill(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
-                                sx={{ mr: 1 }}
-                            />
-                            <Button onClick={handleAddSkill}>Add Skill</Button>
-                            <Box sx={{ mt: 1 }}>
-                                {formData.skills.map((skill) => (
-                                    <Chip
-                                        key={skill}
-                                        label={skill}
-                                        onDelete={() => handleRemoveSkill(skill)}
-                                        sx={{ mr: 0.5, mb: 0.5 }}
-                                    />
-                                ))}
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle1" gutterBottom>Required Skills</Typography>
+                                <TextField
+                                    label="Add Skill"
+                                    value={currentSkill}
+                                    onChange={(e) => setCurrentSkill(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
+                                    sx={{ mr: 1 }}
+                                />
+                                <Button onClick={handleAddSkill}>Add Skill</Button>
+                                <Box sx={{ mt: 1 }}>
+                                    {formData.skills.map((skill) => (
+                                        <Chip
+                                            key={skill}
+                                            label={skill}
+                                            onDelete={() => handleRemoveSkill(skill)}
+                                            sx={{ mr: 0.5, mb: 0.5 }}
+                                        />
+                                    ))}
+                                </Box>
                             </Box>
-                        </Box>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>Course Modules</Typography>
+                                {formData.modules.map((module, moduleIndex) => (
+                                    <Accordion key={moduleIndex} sx={{ mt: 2 }}>
+                                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                            <Typography>Module {module.order}: {module.title}</Typography>
+                                        </AccordionSummary>
+                                        <AccordionDetails>
+                                            <TextField
+                                                fullWidth
+                                                label="Module Title"
+                                                value={module.title}
+                                                onChange={(e) => handleEditModule(moduleIndex, 'title', e.target.value)}
+                                                sx={{ mb: 2 }}
+                                            />
+                                            <TextField
+                                                fullWidth
+                                                label="Module Description"
+                                                multiline
+                                                rows={2}
+                                                value={module.description}
+                                                onChange={(e) => handleEditModule(moduleIndex, 'description', e.target.value)}
+                                                sx={{ mb: 2 }}
+                                            />
 
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="h6" gutterBottom>Course Modules</Typography>
-                            {formData.modules.map((module, moduleIndex) => (
-                                <Accordion key={moduleIndex} sx={{ mt: 2 }}>
-                                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                        <Typography>Module {module.order}: {module.title}</Typography>
-                                    </AccordionSummary>
-                                    <AccordionDetails>
-                                        <TextField
-                                            fullWidth
-                                            label="Module Title"
-                                            value={module.title}
-                                            onChange={(e) => handleEditModule(moduleIndex, 'title', e.target.value)}
-                                            sx={{ mb: 2 }}
-                                        />
-                                        <TextField
-                                            fullWidth
-                                            label="Module Description"
-                                            multiline
-                                            rows={2}
-                                            value={module.description}
-                                            onChange={(e) => handleEditModule(moduleIndex, 'description', e.target.value)}
-                                            sx={{ mb: 2 }}
-                                        />
+                                            <Typography variant="subtitle1" gutterBottom>Module Lessons</Typography>
+                                            {module.lessons.map((lesson, lessonIndex) => (
+                                                <Paper key={lessonIndex} sx={{ p: 2, mb: 2 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Lesson Title"
+                                                        value={lesson.title}
+                                                        onChange={(e) => handleEditLesson(moduleIndex, lessonIndex, 'title', e.target.value)}
+                                                        sx={{ mb: 2 }}
+                                                    />
+                                                    <TextField
+                                                        fullWidth
+                                                        label="Lesson Description"
+                                                        multiline
+                                                        rows={2}
+                                                        value={lesson.description}
+                                                        onChange={(e) => handleEditLesson(moduleIndex, lessonIndex, 'description', e.target.value)}
+                                                        sx={{ mb: 2 }}
+                                                    />
+                                                    <Box sx={{ mb: 2 }}>
+                                                        <Typography variant="subtitle2" gutterBottom>Video</Typography>
+                                                        <input
+                                                            accept="video/*"
+                                                            type="file"
+                                                            id={`video-upload-${moduleIndex}-${lessonIndex}`}
+                                                            onChange={(e) => handleVideoUpload(e, moduleIndex, lessonIndex)}
+                                                            style={{ display: 'none' }}
+                                                        />
+                                                        <label htmlFor={`video-upload-${moduleIndex}-${lessonIndex}`}>
+                                                            <Button
+                                                                variant="outlined"
+                                                                component="span"
+                                                                startIcon={<VideoLibraryIcon />}
+                                                                disabled={uploadingVideo}
+                                                            >
+                                                                {uploadingVideo ? 'Uploading...' : 'Upload Video'}
+                                                            </Button>
+                                                        </label>
+                                                        {lesson.content.videoUrl && (
+                                                            <Box sx={{ mt: 1 }}>
+                                                                <Typography variant="body2" color="success.main">
+                                                                    Video uploaded successfully
+                                                                </Typography>
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    URL: {lesson.content.videoUrl}
+                                                                </Typography>
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleRemoveLesson(moduleIndex, lessonIndex)}
+                                                        color="error"
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Paper>
+                                            ))}
 
-                                        <Typography variant="subtitle1" gutterBottom>Module Lessons</Typography>
-                                        {module.lessons.map((lesson, lessonIndex) => (
-                                            <Paper key={lessonIndex} sx={{ p: 2, mb: 2 }}>
+                                            <Box sx={{ mt: 2 }}>
+                                                <Typography variant="subtitle2" gutterBottom>Add New Lesson</Typography>
                                                 <TextField
                                                     fullWidth
                                                     label="Lesson Title"
-                                                    value={lesson.title}
-                                                    onChange={(e) => handleEditLesson(moduleIndex, lessonIndex, 'title', e.target.value)}
-                                                    sx={{ mb: 2 }}
+                                                    value={currentLesson.title}
+                                                    onChange={(e) => setCurrentLesson(prev => ({ ...prev, title: e.target.value }))}
+                                                    sx={{ mb: 1 }}
                                                 />
                                                 <TextField
                                                     fullWidth
                                                     label="Lesson Description"
                                                     multiline
                                                     rows={2}
-                                                    value={lesson.description}
-                                                    onChange={(e) => handleEditLesson(moduleIndex, lessonIndex, 'description', e.target.value)}
-                                                    sx={{ mb: 2 }}
+                                                    value={currentLesson.description}
+                                                    onChange={(e) => setCurrentLesson(prev => ({ ...prev, description: e.target.value }))}
+                                                    sx={{ mb: 1 }}
                                                 />
-                                                <Box sx={{ mb: 2 }}>
-                                                    <Typography variant="subtitle2" gutterBottom>Video</Typography>
+                                                <Box sx={{ mb: 1 }}>
                                                     <input
                                                         accept="video/*"
                                                         type="file"
-                                                        id={`video-upload-${moduleIndex}-${lessonIndex}`}
-                                                        onChange={(e) => handleVideoUpload(e, moduleIndex, lessonIndex)}
+                                                        id={`new-video-upload-${moduleIndex}`}
+                                                        onChange={(e) => handleVideoUpload(e, moduleIndex)}
                                                         style={{ display: 'none' }}
                                                     />
-                                                    <label htmlFor={`video-upload-${moduleIndex}-${lessonIndex}`}>
+                                                    <label htmlFor={`new-video-upload-${moduleIndex}`}>
                                                         <Button
                                                             variant="outlined"
                                                             component="span"
@@ -836,114 +928,58 @@ const Courses = () => {
                                                             {uploadingVideo ? 'Uploading...' : 'Upload Video'}
                                                         </Button>
                                                     </label>
-                                                    {lesson.content.videoUrl && (
-                                                        <Box sx={{ mt: 1 }}>
-                                                            <Typography variant="body2" color="success.main">
-                                                                Video uploaded successfully
-                                                            </Typography>
-                                                            <Typography variant="body2" color="text.secondary">
-                                                                URL: {lesson.content.videoUrl}
-                                                            </Typography>
-                                                        </Box>
-                                                    )}
                                                 </Box>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleRemoveLesson(moduleIndex, lessonIndex)}
-                                                    color="error"
+                                                <Button
+                                                    variant="contained"
+                                                    onClick={() => handleAddLesson(moduleIndex)}
+                                                    startIcon={<AddIcon />}
+                                                    disabled={!currentLesson.title || !currentLesson.description || !currentLesson.content.videoUrl}
                                                 >
-                                                    <DeleteIcon />
-                                                </IconButton>
-                                            </Paper>
-                                        ))}
-
-                                        <Box sx={{ mt: 2 }}>
-                                            <Typography variant="subtitle2" gutterBottom>Add New Lesson</Typography>
-                                            <TextField
-                                                fullWidth
-                                                label="Lesson Title"
-                                                value={currentLesson.title}
-                                                onChange={(e) => setCurrentLesson(prev => ({ ...prev, title: e.target.value }))}
-                                                sx={{ mb: 1 }}
-                                            />
-                                            <TextField
-                                                fullWidth
-                                                label="Lesson Description"
-                                                multiline
-                                                rows={2}
-                                                value={currentLesson.description}
-                                                onChange={(e) => setCurrentLesson(prev => ({ ...prev, description: e.target.value }))}
-                                                sx={{ mb: 1 }}
-                                            />
-                                            <Box sx={{ mb: 1 }}>
-                                                <input
-                                                    accept="video/*"
-                                                    type="file"
-                                                    id={`new-video-upload-${moduleIndex}`}
-                                                    onChange={(e) => handleVideoUpload(e, moduleIndex)}
-                                                    style={{ display: 'none' }}
-                                                />
-                                                <label htmlFor={`new-video-upload-${moduleIndex}`}>
-                                                    <Button
-                                                        variant="outlined"
-                                                        component="span"
-                                                        startIcon={<VideoLibraryIcon />}
-                                                        disabled={uploadingVideo}
-                                                    >
-                                                        {uploadingVideo ? 'Uploading...' : 'Upload Video'}
-                                                    </Button>
-                                                </label>
+                                                    Add Lesson to Module
+                                                </Button>
                                             </Box>
-                                            <Button
-                                                variant="contained"
-                                                onClick={() => handleAddLesson(moduleIndex)}
-                                                startIcon={<AddIcon />}
-                                                disabled={!currentLesson.title || !currentLesson.description || !currentLesson.content.videoUrl}
+
+                                            <IconButton
+                                                onClick={() => handleRemoveModule(moduleIndex)}
+                                                color="error"
+                                                sx={{ mt: 1 }}
                                             >
-                                                Add Lesson to Module
-                                            </Button>
-                                        </Box>
+                                                <DeleteIcon />
+                                            </IconButton>
+                                        </AccordionDetails>
+                                    </Accordion>
+                                ))}
 
-                                        <IconButton
-                                            onClick={() => handleRemoveModule(moduleIndex)}
-                                            color="error"
-                                            sx={{ mt: 1 }}
-                                        >
-                                            <DeleteIcon />
-                                        </IconButton>
-                                    </AccordionDetails>
-                                </Accordion>
-                            ))}
-
-                            <Paper sx={{ p: 2, mb: 2 }}>
-                                <Typography variant="subtitle1" gutterBottom>Add New Module</Typography>
-                                <TextField
-                                    fullWidth
-                                    label="Module Title"
-                                    value={currentModule.title}
-                                    onChange={(e) => setCurrentModule(prev => ({ ...prev, title: e.target.value }))}
-                                    sx={{ mb: 1 }}
-                                />
-                                <TextField
-                                    fullWidth
-                                    label="Module Description"
-                                    multiline
-                                    rows={2}
-                                    value={currentModule.description}
-                                    onChange={(e) => setCurrentModule(prev => ({ ...prev, description: e.target.value }))}
-                                    sx={{ mb: 1 }}
-                                />
-                                <Button
-                                    variant="contained"
-                                    onClick={handleAddModule}
-                                    startIcon={<AddIcon />}
-                                    disabled={!currentModule.title || !currentModule.description}
-                                >
-                                    Add Module
-                                </Button>
-                            </Paper>
-                        </Box>
-                    </Box>
+                                <Paper sx={{ p: 2, mb: 2 }}>
+                                    <Typography variant="subtitle1" gutterBottom>Add New Module</Typography>
+                                    <TextField
+                                        fullWidth
+                                        label="Module Title"
+                                        value={currentModule.title}
+                                        onChange={(e) => setCurrentModule(prev => ({ ...prev, title: e.target.value }))}
+                                        sx={{ mb: 1 }}
+                                    />
+                                    <TextField
+                                        fullWidth
+                                        label="Module Description"
+                                        multiline
+                                        rows={2}
+                                        value={currentModule.description}
+                                        onChange={(e) => setCurrentModule(prev => ({ ...prev, description: e.target.value }))}
+                                        sx={{ mb: 1 }}
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleAddModule}
+                                        startIcon={<AddIcon />}
+                                        disabled={!currentModule.title || !currentModule.description}
+                                    >
+                                        Add Module
+                                    </Button>
+                                </Paper>
+                            </Box>
+                        </Grid>
+                    </Grid>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseDialog}>Cancel</Button>

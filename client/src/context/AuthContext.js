@@ -1,99 +1,120 @@
 import React, { createContext, useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
-import { authService } from '../api/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authService } from '../services/authService';
 
 // Create the context
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [userToken, setUserToken] = useState(null);
     const [user, setUser] = useState(null);
+    const [userToken, setUserToken] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Check if user is logged in on app start
     useEffect(() => {
-        const bootstrapAsync = async () => {
-            try {
-                // Get token from secure storage
-                const token = await SecureStore.getItemAsync('authToken');
-
-                if (token) {
-                    // Verify token and get user profile
-                    const userProfile = await authService.getProfile();
-                    setUser(userProfile);
-                    setUserToken(token);
-                }
-            } catch (e) {
-                // Token is invalid or expired
-                await SecureStore.deleteItemAsync('authToken');
-                setUser(null);
-                setUserToken(null);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        bootstrapAsync();
+        loadUser();
     }, []);
 
-    // Login function
-    const login = async (email, password) => {
-        setIsLoading(true);
-        setError(null);
-
+    const loadUser = async () => {
         try {
-            const response = await authService.login({ email, password });
-            const { token, user } = response;
-
-            // Save token to secure storage
-            await SecureStore.setItemAsync('authToken', token);
-
-            setUserToken(token);
-            setUser(user);
-            return true;
+            const userData = await AsyncStorage.getItem('user');
+            const token = await AsyncStorage.getItem('token');
+            if (userData && token) {
+                setUser(JSON.parse(userData));
+                setUserToken(token);
+            }
         } catch (error) {
-            setError(error.message || 'Login failed');
+            console.error('Error loading user:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const register = async (name, email, password, preferredCategories) => {
+        try {
+            setIsLoading(true);
+            setError(null);
+
+            const response = await authService.register({
+                name,
+                email,
+                password,
+                preferredCategories
+            });
+
+            if (response.success) {
+                const { token, user: userData } = response.data;
+                console.log('Registration response:', response.data); // Debug log
+                await AsyncStorage.setItem('user', JSON.stringify(userData));
+                await AsyncStorage.setItem('token', token);
+                setUser(userData);
+                setUserToken(token);
+                return true;
+            } else {
+                setError(response.message);
+                return false;
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            setError(error.message || 'An error occurred during registration');
             return false;
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Register function
-    const register = async (name, email, password) => {
-        setIsLoading(true);
-        setError(null);
-
+    const login = async (token, userData) => {
         try {
-            const response = await authService.register({ name, email, password });
-            const { token, user } = response;
+            setIsLoading(true);
+            setError(null);
 
-            // Save token to secure storage
-            await SecureStore.setItemAsync('authToken', token);
-
+            // Set the user data and token
+            setUser(userData);
             setUserToken(token);
-            setUser(user);
             return true;
         } catch (error) {
-            setError(error.message || 'Registration failed');
+            console.error('Login error:', error);
+            setError(error.message || 'An error occurred during login');
             return false;
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Logout function
     const logout = async () => {
-        setIsLoading(true);
-
         try {
-            // Remove token from secure storage
-            await SecureStore.deleteItemAsync('authToken');
-            setUserToken(null);
+            setIsLoading(true);
+            await AsyncStorage.removeItem('user');
+            await AsyncStorage.removeItem('token');
             setUser(null);
+            setUserToken(null);
         } catch (error) {
             console.error('Logout error:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const updateUserPreferences = async (preferredCategories) => {
+        try {
+            setIsLoading(true);
+            setError(null);
+
+            const response = await authService.updatePreferences({ preferredCategories });
+
+            if (response.success) {
+                const updatedUser = { ...user, preferredCategories };
+                await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+                setUser(updatedUser);
+                return true;
+            } else {
+                setError(response.message);
+                return false;
+            }
+        } catch (error) {
+            console.error('Update preferences error:', error);
+            setError(error.message || 'An error occurred while updating preferences');
+            return false;
         } finally {
             setIsLoading(false);
         }
@@ -102,13 +123,14 @@ export const AuthProvider = ({ children }) => {
     return (
         <AuthContext.Provider
             value={{
-                isLoading,
-                userToken,
                 user,
+                userToken,
+                isLoading,
                 error,
-                login,
                 register,
+                login,
                 logout,
+                updateUserPreferences
             }}
         >
             {children}

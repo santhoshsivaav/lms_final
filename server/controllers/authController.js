@@ -14,7 +14,8 @@ const generateToken = (userId) => {
 // Register new user
 const register = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password, preferredCategories } = req.body;
+        console.log('Registration data:', { name, email, preferredCategories }); // Debug log
 
         // Check if user already exists
         const existingUser = await User.findOne({ email });
@@ -25,37 +26,81 @@ const register = async (req, res) => {
             });
         }
 
-        // Create new user
+        // Validate categories if provided
+        let validCategories = [];
+        if (preferredCategories && preferredCategories.length > 0) {
+            try {
+                const Category = require('../models/Category');
+                console.log('Validating categories:', preferredCategories); // Debug log
+
+                validCategories = await Category.find({
+                    _id: { $in: preferredCategories }
+                });
+
+                console.log('Found valid categories:', validCategories); // Debug log
+
+                if (validCategories.length !== preferredCategories.length) {
+                    console.log('Category validation failed:', {
+                        requested: preferredCategories,
+                        found: validCategories.map(c => c._id)
+                    });
+                    return res.status(400).json({
+                        success: false,
+                        message: 'One or more invalid categories'
+                    });
+                }
+            } catch (error) {
+                console.error('Error validating categories:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Error validating categories',
+                    error: error.message
+                });
+            }
+        }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Create new user with validated categories
         const user = new User({
             name,
             email,
-            password,
+            password: hashedPassword,
+            preferredCategories: validCategories.map(cat => cat._id)
         });
 
+        console.log('User before save:', user); // Debug log
         await user.save();
+        console.log('User after save:', user); // Debug log
 
         // Generate token
         const token = generateToken(user._id);
 
+        // Populate categories before sending response
+        const populatedUser = await User.findById(user._id).populate('preferredCategories');
+        console.log('Populated user:', populatedUser);
+
         res.status(201).json({
             success: true,
-            message: 'Registration successful',
             data: {
                 token,
                 user: {
-                    id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                    subscription: user.subscription,
-                },
-            },
+                    id: populatedUser._id,
+                    name: populatedUser.name,
+                    email: populatedUser.email,
+                    role: populatedUser.role,
+                    preferredCategories: populatedUser.preferredCategories
+                }
+            }
         });
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({
             success: false,
             message: 'Registration failed',
+            error: error.message
         });
     }
 };

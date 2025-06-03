@@ -2,31 +2,28 @@ const Course = require('../models/Course');
 const Video = require('../models/Video');
 const { uploadImage, uploadVideo, generateWatermarkedVideoUrl } = require('../utils/cloudinary');
 const User = require('../models/User');
+const Category = require('../models/Category');
 
 /**
  * Get all courses
  */
 const getAllCourses = async (req, res) => {
     try {
-        console.log('Fetching all courses...');
-        const courses = await Course.find()
-            .select('-videos')
+        const { category } = req.query;
+        let query = {};
+
+        if (category) {
+            query.category = category;
+        }
+
+        const courses = await Course.find(query)
+            .populate('category', 'name description')
             .sort({ createdAt: -1 });
 
-        console.log('Courses found:', courses.length);
-        console.log('First course:', courses[0]);
-
-        res.json({
-            success: true,
-            data: courses
-        });
+        res.json({ success: true, data: courses });
     } catch (error) {
-        console.error('Error in getAllCourses:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch courses',
-            error: error.message
-        });
+        console.error('Error fetching courses:', error);
+        res.status(500).json({ success: false, message: 'Error fetching courses' });
     }
 };
 
@@ -59,42 +56,16 @@ const searchCourses = async (req, res) => {
  */
 const getCourseById = async (req, res) => {
     try {
-        const { id } = req.params;
-        console.log('Fetching course by ID:', id);
-
-        const course = await Course.findOne({ _id: id });
+        const course = await Course.findById(req.params.id)
+            .populate('category', 'name description');
 
         if (!course) {
-            console.log('Course not found');
-            return res.status(404).json({
-                success: false,
-                message: 'Course not found'
-            });
+            return res.status(404).json({ success: false, message: 'Course not found' });
         }
-
-        console.log('Course found:', course.title);
-
-        // Sort modules and lessons by order
-        if (course.modules) {
-            course.modules.sort((a, b) => a.order - b.order);
-            course.modules.forEach(module => {
-                if (module.lessons) {
-                    module.lessons.sort((a, b) => a.order - b.order);
-                }
-            });
-        }
-
-        res.json({
-            success: true,
-            data: course
-        });
+        res.json({ success: true, data: course });
     } catch (error) {
         console.error('Error fetching course:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch course',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Error fetching course' });
     }
 };
 
@@ -378,10 +349,10 @@ const getVideoPlayerUrl = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching video player URL:', error);
+        console.error('Error getting video player URL:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch video player URL',
+            message: 'Error getting video URL',
             error: error.message
         });
     }
@@ -392,63 +363,42 @@ const getVideoPlayerUrl = async (req, res) => {
  */
 const createCourse = async (req, res) => {
     try {
-        console.log('Creating course with data:', req.body);
-        console.log('User from request:', req.user);
-
-        if (!req.user || !req.user._id) {
-            return res.status(401).json({
-                success: false,
-                message: 'User not authenticated'
-            });
+        if (!req.user.isAdmin) {
+            return res.status(403).json({ success: false, message: 'Only admins can create courses' });
         }
 
-        if (req.user.role !== 'admin') {
-            return res.status(403).json({
-                success: false,
-                message: 'Only admins can create courses'
-            });
-        }
+        const { title, description, thumbnail, category, tags, skills, modules } = req.body;
 
         // Validate required fields
-        const { title, description, thumbnail } = req.body;
-
-        if (!title || !description || !thumbnail) {
+        if (!title || !description || !thumbnail || !category) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: title, description, and thumbnail are required'
+                message: 'Missing required fields: title, description, thumbnail, and category are required'
             });
         }
 
-        // Create new course
-        const courseData = {
+        // Check if category exists
+        const categoryExists = await Category.findById(category);
+        if (!categoryExists) {
+            return res.status(400).json({ success: false, message: 'Invalid category' });
+        }
+
+        const course = new Course({
             title,
             description,
             thumbnail,
-            tags: req.body.tags || [],
-            skills: req.body.skills || [],
-            modules: req.body.modules || [],
+            category,
+            tags: tags || [],
+            skills: skills || [],
+            modules: modules || [],
             status: 'draft'
-        };
-
-        console.log('Creating course with data:', courseData);
-        const course = new Course(courseData);
-
-        console.log('Saving course:', course);
-        await course.save();
-        console.log('Course saved successfully');
-
-        res.status(201).json({
-            success: true,
-            message: 'Course created successfully',
-            data: course
         });
+
+        await course.save();
+        res.status(201).json({ success: true, data: course });
     } catch (error) {
         console.error('Error creating course:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create course',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Error creating course' });
     }
 };
 
@@ -686,6 +636,49 @@ const getAllVideos = async (req, res) => {
     }
 };
 
+/**
+ * Get courses by category
+ */
+const getCoursesByCategory = async (req, res) => {
+    try {
+        const { categoryId } = req.params;
+        const courses = await Course.find({ category: categoryId })
+            .populate('category', 'name description')
+            .sort({ createdAt: -1 });
+
+        res.json({ success: true, data: courses });
+    } catch (error) {
+        console.error('Error fetching courses by category:', error);
+        res.status(500).json({ success: false, message: 'Error fetching courses by category' });
+    }
+};
+
+/**
+ * Get recommended courses based on user's preferred categories
+ */
+const getRecommendedCourses = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).populate('preferredCategories');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const categoryIds = user.preferredCategories.map(cat => cat._id);
+        const courses = await Course.find({
+            category: { $in: categoryIds },
+            status: 'published'
+        })
+            .populate('category', 'name description')
+            .sort({ createdAt: -1 })
+            .limit(10);
+
+        res.json({ success: true, data: courses });
+    } catch (error) {
+        console.error('Error fetching recommended courses:', error);
+        res.status(500).json({ success: false, message: 'Error fetching recommended courses' });
+    }
+};
+
 module.exports = {
     getAllCourses,
     searchCourses,
@@ -702,5 +695,7 @@ module.exports = {
     getEnrolledCourses,
     enrollInCourse,
     getCourseProgress,
-    getLessonDetails
+    getLessonDetails,
+    getCoursesByCategory,
+    getRecommendedCourses
 }; 

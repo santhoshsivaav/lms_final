@@ -7,8 +7,10 @@ const {
     getAllCourses,
     getCourseById,
     updateCourse,
-    deleteCourse
-} = require('../src/controllers/courseController');
+    deleteCourse,
+    getCoursesByCategory,
+    getRecommendedCourses
+} = require('../controllers/courseController');
 const { protect, admin } = require('../middleware/auth');
 const Course = require('../models/Course');
 const cloudinary = require('cloudinary').v2;
@@ -46,8 +48,10 @@ const upload = multer({
     }
 });
 
-// Public routes - no authentication required
+// Public routes
 router.get('/', getAllCourses);
+router.get('/recommended', protect, getRecommendedCourses);
+router.get('/category/:categoryId', getCoursesByCategory);
 router.get('/:id', getCourseById);
 
 // Protected routes - authentication required

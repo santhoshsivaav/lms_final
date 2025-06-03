@@ -27,7 +27,7 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await fetch('http://192.168.230.119:5000/api/auth/login', {
+            const response = await fetch('http://192.168.75.119:5000/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -40,12 +40,15 @@ const Login = () => {
             if (response.ok) {
                 // Store the token in localStorage
                 localStorage.setItem('token', data.token);
+                // Store user data if needed
+                localStorage.setItem('user', JSON.stringify(data.user));
                 // Redirect to dashboard
-                navigate('/dashboard');
+                navigate('/dashboard', { replace: true });
             } else {
                 setError(data.message || 'Login failed');
             }
         } catch (err) {
+            console.error('Login error:', err);
             setError('An error occurred. Please try again.');
         }
     };

@@ -111,6 +111,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    preferredCategories: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
+        required: false
+    }],
     subscription: subscriptionSchema,
     progress: [courseProgressSchema],
     preferences: {
@@ -156,8 +161,8 @@ userSchema.pre('save', async function (next) {
             }
             return next();
         }
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
+        this.password = await bcrypt.hash(this.password, 12);
+        next();
     } catch (error) {
         next(error);
     }
@@ -175,10 +180,10 @@ userSchema.methods.hasActiveSubscription = function () {
             return false;
         }
         return Boolean(
-        this.subscription.isActive &&
-        this.subscription.endDate &&
+            this.subscription.isActive &&
+            this.subscription.endDate &&
             new Date(this.subscription.endDate) > new Date()
-    );
+        );
     } catch (error) {
         console.error('Error checking subscription:', error);
         return false;

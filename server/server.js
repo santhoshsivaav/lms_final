@@ -9,6 +9,7 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/auth');
 const courseRoutes = require('./routes/courseRoutes');
 const userRoutes = require('./routes/userRoutes');
+const categoryRoutes = require('./routes/categories');
 const User = require('./models/User');
 const fs = require('fs');
 
@@ -24,7 +25,7 @@ app.use(helmet());
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
+    max: 1000 // Increased limit to 1000 requests per windowMs
 });
 app.use(limiter);
 
@@ -33,10 +34,11 @@ app.use(morgan('dev'));
 
 // Configure CORS
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://192.168.230.119:3000', 'exp://192.168.230.119:19000', 'http://192.168.230.119:5000'],
+    origin: ['http://localhost:3000', 'http://192.168.75.119:3000', 'exp://192.168.75.119:19000', 'exp://192.168.75.119:8081', 'http://192.168.75.119:5000', 'http://localhost:5000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 
 // Middleware
@@ -89,6 +91,7 @@ app.get('/api/allusers', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/api/devices', require('./routes/deviceRoutes'));
 app.use('/api/subscriptions', require('./routes/subscription'));
 app.use('/api/analytics', require('./routes/analytics'));
@@ -109,6 +112,6 @@ app.use((req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '192.168.230.119', () => {
-    console.log(`Server is running on http://192.168.230.119:${PORT}`);
+app.listen(PORT, '192.168.75.119', () => {
+    console.log(`Server is running on http://192.168.75.119:${PORT}`);
 });

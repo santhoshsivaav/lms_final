@@ -54,6 +54,11 @@ const courseSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: true
+  },
   tags: [{
     type: String,
     trim: true
@@ -67,6 +72,14 @@ const courseSchema = new mongoose.Schema({
     type: String,
     enum: ['draft', 'published', 'archived'],
     default: 'draft'
+  },
+  enrolledStudents: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  totalStudents: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
