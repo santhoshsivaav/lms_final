@@ -23,7 +23,7 @@ import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import axios from 'axios';
 
 // Configure axios defaults
-axios.defaults.baseURL = 'http://192.168.75.119:5000';
+axios.defaults.baseURL = 'http://192.168.1.5:5000';
 
 const Categories = () => {
     const [categories, setCategories] = useState([]);

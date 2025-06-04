@@ -527,6 +527,30 @@ const courseController = {
             console.error('Error enrolling in course:', error);
             res.status(500).json({ message: 'Error enrolling in course' });
         }
+    },
+
+    // Get courses by user's categories
+    getCoursesByUserCategories: async (req, res) => {
+        try {
+            const user = req.user;
+            if (!user || !user.preferredCategories || user.preferredCategories.length === 0) {
+                return res.json({ data: [] });
+            }
+
+            // Extract category IDs from the preferredCategories array
+            const categoryIds = user.preferredCategories.map(cat => cat._id || cat);
+
+            const courses = await Course.find({
+                category: { $in: categoryIds }
+            })
+                .populate('category', 'name description')
+                .sort({ createdAt: -1 });
+
+            res.json({ data: courses });
+        } catch (error) {
+            console.error('Error fetching courses by user categories:', error);
+            res.status(500).json({ message: 'Error fetching courses' });
+        }
     }
 };
 

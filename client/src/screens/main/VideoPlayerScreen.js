@@ -17,14 +17,14 @@ import { Video } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { courseService } from '../../services/courseService';
-import { AuthContext } from '../../contexts/AuthContext';
+import { AuthContext } from '../../context/AuthContext';
 import * as ScreenCapture from 'expo-screen-capture';
 import { COLORS } from '../../utils/theme';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useFocusEffect } from '@react-navigation/native';
 
 const VideoPlayerScreen = ({ navigation, route }) => {
-    const { courseId, lessonId, title } = route.params;
+    const { courseId, videoId, videoTitle } = route.params;
     const [video, setVideo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -40,6 +40,11 @@ const VideoPlayerScreen = ({ navigation, route }) => {
     const animatedY = useRef(new Animated.Value(0)).current;
     const [orientation, setOrientation] = useState(null);
     const [isCustomFullscreen, setIsCustomFullscreen] = useState(false);
+    const [showControls, setShowControls] = useState(true);
+    const controlsTimeout = useRef(null);
+    const lastTouchTime = useRef(Date.now());
+    const isTouching = useRef(false);
+    const isOrientationChanging = useRef(false);
 
     const { user } = useContext(AuthContext);
 
@@ -81,15 +86,15 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                 }
 
                 // Validate required parameters
-                if (!courseId || !lessonId) {
-                    console.error('Missing required parameters:', { courseId, lessonId });
+                if (!courseId || !videoId) {
+                    console.error('Missing required parameters:', { courseId, videoId });
                     setError('Invalid video parameters');
                     setLoading(false);
                     return;
                 }
 
-                console.log('Fetching video details for:', { courseId, lessonId });
-                const response = await courseService.getVideoPlayerUrl(courseId, lessonId);
+                console.log('Fetching video details for:', { courseId, videoId });
+                const response = await courseService.getVideoPlayerUrl(courseId, videoId);
                 console.log('Video details response:', response);
 
                 if (!response) {
@@ -149,7 +154,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                 clearInterval(progressInterval.current);
             }
         };
-    }, [courseId, lessonId, user]);
+    }, [courseId, videoId, user]);
 
     // Save progress periodically
     useEffect(() => {
@@ -189,11 +194,11 @@ const VideoPlayerScreen = ({ navigation, route }) => {
 
             // Mark as completed if watched more than 90%
             if (progressPercent > 90 && !isCompleted) {
-                await courseService.markVideoCompleted(lessonId);
+                await courseService.markVideoCompleted(courseId, videoId);
                 setIsCompleted(true);
             } else {
                 // Just update the current position
-                await courseService.updateVideoProgress(lessonId, status.positionMillis);
+                await courseService.updateVideoProgress(courseId, videoId, status.positionMillis);
             }
         } catch (err) {
             console.error('Error saving progress:', err);
@@ -214,7 +219,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
 
     const markVideoCompleted = async () => {
         try {
-            await courseService.markVideoCompleted(lessonId);
+            await courseService.markVideoCompleted(courseId, videoId);
             setIsCompleted(true);
         } catch (err) {
             console.error('Error marking video as completed:', err);
@@ -227,10 +232,32 @@ const VideoPlayerScreen = ({ navigation, route }) => {
     };
 
     const togglePlayPause = () => {
+        if (isOrientationChanging.current) return;
+
         if (status.isPlaying) {
             videoRef.current.pauseAsync();
         } else {
             videoRef.current.playAsync();
+        }
+    };
+
+    const handleForward = async () => {
+        if (videoRef.current && status.isLoaded) {
+            const newPosition = Math.min(
+                status.positionMillis + 10000,
+                status.durationMillis
+            );
+            await videoRef.current.setPositionAsync(newPosition);
+        }
+    };
+
+    const handleBackward = async () => {
+        if (videoRef.current && status.isLoaded) {
+            const newPosition = Math.max(
+                status.positionMillis - 10000,
+                0
+            );
+            await videoRef.current.setPositionAsync(newPosition);
         }
     };
 
@@ -246,16 +273,62 @@ const VideoPlayerScreen = ({ navigation, route }) => {
 
     const handleFullScreen = async () => {
         try {
+            if (isOrientationChanging.current) return;
+            isOrientationChanging.current = true;
+
+            // Store current position and playing state before switching to fullscreen
+            const currentPosition = status.positionMillis;
+            const wasPlaying = status.isPlaying;
+
             setIsCustomFullscreen(true);
             await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+
+            // Set the position and playing state after a short delay
+            setTimeout(() => {
+                if (videoRef.current) {
+                    if (currentPosition) {
+                        videoRef.current.setPositionAsync(currentPosition);
+                    }
+                    if (wasPlaying) {
+                        videoRef.current.playAsync();
+                    }
+                }
+                isOrientationChanging.current = false;
+            }, 300);
         } catch (e) {
             console.error('Error entering custom full screen:', e);
+            isOrientationChanging.current = false;
         }
     };
 
     const handleExitFullScreen = async () => {
-        setIsCustomFullscreen(false);
-        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+        try {
+            if (isOrientationChanging.current) return;
+            isOrientationChanging.current = true;
+
+            // Store current position and playing state before exiting fullscreen
+            const currentPosition = status.positionMillis;
+            const wasPlaying = status.isPlaying;
+
+            setIsCustomFullscreen(false);
+            await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+
+            // Set the position and playing state after a short delay
+            setTimeout(() => {
+                if (videoRef.current) {
+                    if (currentPosition) {
+                        videoRef.current.setPositionAsync(currentPosition);
+                    }
+                    if (wasPlaying) {
+                        videoRef.current.playAsync();
+                    }
+                }
+                isOrientationChanging.current = false;
+            }, 300);
+        } catch (e) {
+            console.error('Error exiting full screen:', e);
+            isOrientationChanging.current = false;
+        }
     };
 
     const handleFullscreenUpdate = async (event) => {
@@ -344,6 +417,39 @@ const VideoPlayerScreen = ({ navigation, route }) => {
         animateCorners();
     }, [containerWidth, containerHeight, orientation]);
 
+    // Update the handleControlsVisibility function
+    const handleControlsVisibility = () => {
+        if (isTouching.current) return;
+        isTouching.current = true;
+
+        const now = Date.now();
+        if (now - lastTouchTime.current < 300) {
+            isTouching.current = false;
+            return;
+        }
+        lastTouchTime.current = now;
+
+        setShowControls(true);
+        if (controlsTimeout.current) {
+            clearTimeout(controlsTimeout.current);
+        }
+        controlsTimeout.current = setTimeout(() => {
+            setShowControls(false);
+            isTouching.current = false;
+        }, 3000);
+    };
+
+    // Add touch handlers for the fullscreen video
+    const handleTouchStart = () => {
+        isTouching.current = true;
+    };
+
+    const handleTouchEnd = () => {
+        setTimeout(() => {
+            isTouching.current = false;
+        }, 100);
+    };
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -377,7 +483,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                 >
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle} numberOfLines={1}>{title || video?.title}</Text>
+                <Text style={styles.headerTitle} numberOfLines={1}>{videoTitle || video?.title}</Text>
 
                 {isCompleted && (
                     <View style={styles.completedBadge}>
@@ -398,22 +504,62 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                 >
                     {video?.videoUrl ? (
                         <>
-                            <Video
-                                ref={videoRef}
-                                style={styles.video}
-                                source={{ uri: video.videoUrl }}
-                                useNativeControls={false}
-                                resizeMode="contain"
-                                onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-                                onError={handleError}
-                                shouldPlay={true}
-                                isLooping={false}
-                                isMuted={false}
-                                volume={1.0}
-                                rate={1.0}
-                                progressUpdateIntervalMillis={1000}
-                                onFullscreenUpdate={handleFullscreenUpdate}
-                            />
+                            <TouchableOpacity
+                                style={styles.videoTouchable}
+                                onPress={handleControlsVisibility}
+                                activeOpacity={1}
+                            >
+                                <Video
+                                    ref={videoRef}
+                                    style={styles.video}
+                                    source={{ uri: video.videoUrl }}
+                                    useNativeControls={false}
+                                    resizeMode="contain"
+                                    onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                                    onError={handleError}
+                                    shouldPlay={true}
+                                    isLooping={false}
+                                    isMuted={false}
+                                    volume={1.0}
+                                    rate={1.0}
+                                    progressUpdateIntervalMillis={1000}
+                                    onFullscreenUpdate={handleFullscreenUpdate}
+                                />
+                                {/* Controls overlay */}
+                                {showControls && (
+                                    <View style={styles.controls}>
+                                        <TouchableOpacity onPress={togglePlayPause}>
+                                            <Ionicons
+                                                name={status.isPlaying ? "pause" : "play"}
+                                                size={32}
+                                                color="#fff"
+                                            />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={handleFullScreen} style={{ marginLeft: 16 }}>
+                                            <Ionicons name="expand" size={28} color="#fff" />
+                                        </TouchableOpacity>
+                                        <View style={styles.progressContainer}>
+                                            <Text style={styles.timeText}>
+                                                {formatTime(status.positionMillis)}
+                                            </Text>
+                                            <View style={styles.progressBar}>
+                                                <View
+                                                    style={[
+                                                        styles.progress,
+                                                        {
+                                                            width: `${status.positionMillis && status.durationMillis ?
+                                                                (status.positionMillis / status.durationMillis) * 100 : 0}%`
+                                                        }
+                                                    ]}
+                                                />
+                                            </View>
+                                            <Text style={styles.timeText}>
+                                                {formatTime(status.durationMillis)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                             {/* Portrait button in landscape/fullscreen mode */}
                             {isLandscape && (
                                 <TouchableOpacity
@@ -447,41 +593,6 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                             <Text style={styles.errorText}>Video URL not available</Text>
                         </View>
                     )}
-                    {/* Custom controls */}
-                    {video?.videoUrl && (
-                        <View style={styles.controls}>
-                            <TouchableOpacity onPress={togglePlayPause}>
-                                <Ionicons
-                                    name={status.isPlaying ? "pause" : "play"}
-                                    size={32}
-                                    color="#fff"
-                                />
-                            </TouchableOpacity>
-                            {/* Full screen button */}
-                            <TouchableOpacity onPress={handleFullScreen} style={{ marginLeft: 16 }}>
-                                <Ionicons name="expand" size={28} color="#fff" />
-                            </TouchableOpacity>
-                            <View style={styles.progressContainer}>
-                                <Text style={styles.timeText}>
-                                    {formatTime(status.positionMillis)}
-                                </Text>
-                                <View style={styles.progressBar}>
-                                    <View
-                                        style={[
-                                            styles.progress,
-                                            {
-                                                width: `${status.positionMillis && status.durationMillis ?
-                                                    (status.positionMillis / status.durationMillis) * 100 : 0}%`
-                                            }
-                                        ]}
-                                    />
-                                </View>
-                                <Text style={styles.timeText}>
-                                    {formatTime(status.durationMillis)}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
                 </View>
             )}
 
@@ -490,21 +601,72 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                 <View style={styles.fullscreenContainer}>
                     {video?.videoUrl && (
                         <>
-                            <Video
-                                ref={videoRef}
+                            <TouchableOpacity
                                 style={styles.fullscreenVideo}
-                                source={{ uri: video.videoUrl }}
-                                useNativeControls={false}
-                                resizeMode="contain"
-                                onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-                                onError={handleError}
-                                shouldPlay={true}
-                                isLooping={false}
-                                isMuted={false}
-                                volume={1.0}
-                                rate={1.0}
-                                progressUpdateIntervalMillis={1000}
-                            />
+                                onPress={handleControlsVisibility}
+                                onPressIn={handleTouchStart}
+                                onPressOut={handleTouchEnd}
+                                activeOpacity={1}
+                                delayPressIn={0}
+                                delayPressOut={0}
+                            >
+                                <Video
+                                    ref={videoRef}
+                                    style={StyleSheet.absoluteFill}
+                                    source={{ uri: video.videoUrl }}
+                                    useNativeControls={false}
+                                    resizeMode="contain"
+                                    onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                                    onError={handleError}
+                                    shouldPlay={status.isPlaying}
+                                    isLooping={false}
+                                    isMuted={false}
+                                    volume={1.0}
+                                    rate={1.0}
+                                    progressUpdateIntervalMillis={1000}
+                                />
+                                {/* Controls overlay in fullscreen */}
+                                {showControls && (
+                                    <View style={styles.controlsFullscreen}>
+                                        <TouchableOpacity
+                                            onPress={togglePlayPause}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Ionicons
+                                                name={status.isPlaying ? "pause" : "play"}
+                                                size={32}
+                                                color="#fff"
+                                            />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={handleExitFullScreen}
+                                            style={{ marginLeft: 16 }}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Ionicons name="contract" size={28} color="#fff" />
+                                        </TouchableOpacity>
+                                        <View style={styles.progressContainerFullscreen}>
+                                            <Text style={styles.timeText}>
+                                                {formatTime(status.positionMillis)}
+                                            </Text>
+                                            <View style={styles.progressBar}>
+                                                <View
+                                                    style={[
+                                                        styles.progress,
+                                                        {
+                                                            width: `${status.positionMillis && status.durationMillis ?
+                                                                (status.positionMillis / status.durationMillis) * 100 : 0}%`
+                                                        }
+                                                    ]}
+                                                />
+                                            </View>
+                                            <Text style={styles.timeText}>
+                                                {formatTime(status.durationMillis)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                             {/* Watermark overlay in fullscreen */}
                             {user?.email && (
                                 <Animated.View
@@ -520,39 +682,6 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                                     <Text style={styles.watermarkText}>{user.email}</Text>
                                 </Animated.View>
                             )}
-                            {/* Exit fullscreen button */}
-                            <TouchableOpacity style={styles.exitFullscreenButton} onPress={handleExitFullScreen}>
-                                <Ionicons name="contract" size={32} color="#fff" />
-                            </TouchableOpacity>
-                            {/* Custom controls in fullscreen */}
-                            <View style={styles.controlsFullscreen}>
-                                <TouchableOpacity onPress={togglePlayPause}>
-                                    <Ionicons
-                                        name={status.isPlaying ? "pause" : "play"}
-                                        size={32}
-                                        color="#fff"
-                                    />
-                                </TouchableOpacity>
-                                <View style={styles.progressContainerFullscreen}>
-                                    <Text style={styles.timeText}>
-                                        {formatTime(status.positionMillis)}
-                                    </Text>
-                                    <View style={styles.progressBar}>
-                                        <View
-                                            style={[
-                                                styles.progress,
-                                                {
-                                                    width: `${status.positionMillis && status.durationMillis ?
-                                                        (status.positionMillis / status.durationMillis) * 100 : 0}%`
-                                                }
-                                            ]}
-                                        />
-                                    </View>
-                                    <Text style={styles.timeText}>
-                                        {formatTime(status.durationMillis)}
-                                    </Text>
-                                </View>
-                            </View>
                         </>
                     )}
                 </View>
@@ -737,12 +866,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         backgroundColor: 'rgba(0,0,0,0.3)',
         padding: 10,
+        zIndex: 10,
     },
     progressContainerFullscreen: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         marginLeft: 15,
+    },
+    videoTouchable: {
+        width: '100%',
+        height: '100%',
     },
 });
 

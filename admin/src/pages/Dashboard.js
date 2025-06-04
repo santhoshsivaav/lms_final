@@ -62,7 +62,7 @@ const Dashboard = () => {
 
     const fetchUsers = async () => {
         try {
-            const response = await fetch('http://192.168.75.119:5000/api/allusers', {
+            const response = await fetch('http://192.168.1.5:5000/api/allusers', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                     'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ const Dashboard = () => {
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch('http://192.168.75.119:5000/api/categories', {
+            const response = await fetch('http://192.168.1.5:5000/api/categories', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                     'Content-Type': 'application/json',
@@ -171,8 +171,8 @@ const Dashboard = () => {
     const handleSubmit = async () => {
         try {
             const url = editingUser
-                ? `http://192.168.75.119:5000/api/users/${editingUser._id}`
-                : 'http://192.168.75.119:5000/api/auth/register';
+                ? `http://192.168.1.5:5000/api/users/${editingUser._id}`
+                : 'http://192.168.1.5:5000/api/auth/register';
 
             // Prepare the data to send
             const userData = {

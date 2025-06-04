@@ -108,6 +108,20 @@ export const courseService = {
         } catch (error) {
             throw new Error(error.response?.data?.message || 'Failed to mark video as completed');
         }
+    },
+
+    // Get courses by user's categories
+    getCoursesByUserCategories: async () => {
+        try {
+            const response = await api.get('/courses/user-categories');
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Failed to fetch courses by categories');
+            }
+            return response.data.data || []; // Return the data array or empty array if no data
+        } catch (error) {
+            console.error('Error fetching courses by categories:', error);
+            return []; // Return empty array on error
+        }
     }
 };
 

@@ -12,7 +12,16 @@ const getAllCourses = async (req, res) => {
         const { category } = req.query;
         let query = {};
 
-        if (category) {
+        // If user is authenticated, filter by their preferred categories
+        if (req.user) {
+            const user = await User.findById(req.user._id).populate('preferredCategories');
+            if (user && user.preferredCategories && user.preferredCategories.length > 0) {
+                // Get the category IDs from the populated preferredCategories
+                const categoryIds = user.preferredCategories.map(cat => cat._id);
+                query.category = { $in: categoryIds };
+            }
+        } else if (category) {
+            // If no user but category query parameter is provided
             query.category = category;
         }
 
@@ -349,10 +358,10 @@ const getVideoPlayerUrl = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error getting video player URL:', error);
+        console.error('Error fetching video player URL:', error);
         res.status(500).json({
             success: false,
-            message: 'Error getting video URL',
+            message: 'Failed to fetch video player URL',
             error: error.message
         });
     }
@@ -679,10 +688,189 @@ const getRecommendedCourses = async (req, res) => {
     }
 };
 
+/**
+ * Get courses by user's preferred categories
+ */
+const getCoursesByUserCategories = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ success: false, message: 'User not authenticated' });
+        }
+
+        const user = await User.findById(req.user._id).populate('preferredCategories');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const query = {};
+        if (user.preferredCategories && user.preferredCategories.length > 0) {
+            // Get the category IDs from the populated preferredCategories
+            const categoryIds = user.preferredCategories.map(cat => cat._id);
+            query.category = { $in: categoryIds };
+        }
+
+        const courses = await Course.find(query)
+            .populate('category', 'name description')
+            .sort({ createdAt: -1 });
+
+        res.json({ success: true, data: courses });
+    } catch (error) {
+        console.error('Error fetching courses by user categories:', error);
+        res.status(500).json({ success: false, message: 'Error fetching courses by user categories' });
+    }
+};
+
+/**
+ * Update video progress
+ */
+const updateVideoProgress = async (req, res) => {
+    try {
+        const { courseId, lessonId } = req.params;
+        const { progress } = req.body;
+        const userId = req.user._id;
+
+        if (!progress && progress !== 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Progress value is required'
+            });
+        }
+
+        const course = await Course.findById(courseId);
+        if (!course) {
+            return res.status(404).json({
+                success: false,
+                message: 'Course not found'
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Find or create progress entry for this course
+        let courseProgress = user.progress.find(p => p.courseId.toString() === courseId);
+        if (!courseProgress) {
+            courseProgress = {
+                courseId,
+                completedLessons: [],
+                lastAccessed: new Date(),
+                lessonProgress: {}
+            };
+            user.progress.push(courseProgress);
+        }
+
+        // Update progress for the lesson
+        courseProgress.lastAccessed = new Date();
+        courseProgress.lessonProgress = courseProgress.lessonProgress || {};
+        courseProgress.lessonProgress[lessonId] = {
+            position: progress,
+            lastUpdated: new Date()
+        };
+
+        await user.save();
+
+        res.json({
+            success: true,
+            data: {
+                courseId,
+                lessonId,
+                progress: courseProgress.lessonProgress[lessonId]
+            }
+        });
+    } catch (error) {
+        console.error('Error updating video progress:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating video progress',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Mark video as completed
+ */
+const markVideoCompleted = async (req, res) => {
+    try {
+        const { courseId, lessonId } = req.params;
+        const userId = req.user._id;
+
+        const course = await Course.findById(courseId);
+        if (!course) {
+            return res.status(404).json({
+                success: false,
+                message: 'Course not found'
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Find or create progress entry for this course
+        let courseProgress = user.progress.find(p => p.courseId.toString() === courseId);
+        if (!courseProgress) {
+            courseProgress = {
+                courseId,
+                completedLessons: [],
+                lastAccessed: new Date(),
+                lessonProgress: {}
+            };
+            user.progress.push(courseProgress);
+        }
+
+        // Add lesson to completed lessons if not already completed
+        if (!courseProgress.completedLessons.includes(lessonId)) {
+            courseProgress.completedLessons.push(lessonId);
+        }
+
+        // Update lesson progress to mark as completed
+        courseProgress.lessonProgress = courseProgress.lessonProgress || {};
+        courseProgress.lessonProgress[lessonId] = {
+            ...courseProgress.lessonProgress[lessonId],
+            completed: true,
+            completedAt: new Date()
+        };
+
+        courseProgress.lastAccessed = new Date();
+        await user.save();
+
+        res.json({
+            success: true,
+            data: {
+                courseId,
+                lessonId,
+                completed: true,
+                completedAt: courseProgress.lessonProgress[lessonId].completedAt
+            }
+        });
+    } catch (error) {
+        console.error('Error marking video as completed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error marking video as completed',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getAllCourses,
     searchCourses,
     getCourseById,
+    getLessonDetails,
+    getCourseProgress,
+    getEnrolledCourses,
+    enrollInCourse,
     getVideoDetails,
     getVideoPlayerUrl,
     createCourse,
@@ -692,10 +880,9 @@ module.exports = {
     updateVideo,
     deleteVideo,
     getAllVideos,
-    getEnrolledCourses,
-    enrollInCourse,
-    getCourseProgress,
-    getLessonDetails,
     getCoursesByCategory,
-    getRecommendedCourses
+    getRecommendedCourses,
+    getCoursesByUserCategories,
+    updateVideoProgress,
+    markVideoCompleted
 }; 

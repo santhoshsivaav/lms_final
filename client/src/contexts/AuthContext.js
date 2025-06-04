@@ -77,8 +77,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
-        isAuthenticated: !!user,
-        hasSubscription: user?.subscription?.isActive || false
+        isAuthenticated: !!user
     };
 
     return (

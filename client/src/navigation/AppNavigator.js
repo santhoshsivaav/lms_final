@@ -10,15 +10,18 @@ import HomeScreen from '../screens/main/HomeScreen';
 import CourseDetailScreen from '../screens/main/CourseDetailScreen';
 import VideoPlayerScreen from '../screens/main/VideoPlayerScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
-import SubscriptionScreen from '../screens/main/SubscriptionScreen';
 import OnboardingScreen from '../screens/auth/OnboardingScreen';
 import SearchScreen from '../screens/main/SearchScreen';
 import MyCoursesScreen from '../screens/main/MyCoursesScreen';
 import CoursesScreen from '../screens/main/CoursesScreen';
+import HelpSupportScreen from '../screens/HelpSupportScreen';
+import TermsPrivacyScreen from '../screens/TermsPrivacyScreen';
+import FAQsScreen from '../screens/FAQsScreen';
+import UserGuideScreen from '../screens/UserGuideScreen';
+import ReportIssueScreen from '../screens/ReportIssueScreen';
 
 // Context
 import { AuthContext } from '../context/AuthContext';
-import { SubscriptionProvider } from '../context/SubscriptionContext';
 
 // Create navigators
 const Stack = createNativeStackNavigator();
@@ -36,8 +39,6 @@ const MainTabNavigator = () => {
                         iconName = focused ? 'home' : 'home-outline';
                     } else if (route.name === 'Profile') {
                         iconName = focused ? 'person' : 'person-outline';
-                    } else if (route.name === 'Subscription') {
-                        iconName = focused ? 'card' : 'card-outline';
                     } else if (route.name === 'MyCourses') {
                         iconName = focused ? 'book' : 'book-outline';
                     }
@@ -62,11 +63,6 @@ const MainTabNavigator = () => {
                 }}
             />
             <Tab.Screen
-                name="Subscription"
-                component={SubscriptionScreen}
-                options={{ headerShown: false }}
-            />
-            <Tab.Screen
                 name="Profile"
                 component={ProfileScreen}
                 options={{ headerShown: false }}
@@ -85,26 +81,99 @@ const AppNavigator = () => {
     }
 
     return (
-        <SubscriptionProvider>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-                {userToken ? (
-                    // User is signed in
-                    <>
-                        <Stack.Screen name="Main" component={MainTabNavigator} />
-                        <Stack.Screen name="Courses" component={CoursesScreen} />
-                        <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
-                        <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
-                    </>
-                ) : (
-                    // User is not signed in
-                    <>
-                        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-                        <Stack.Screen name="Login" component={LoginScreen} />
-                        <Stack.Screen name="Register" component={RegisterScreen} />
-                    </>
-                )}
-            </Stack.Navigator>
-        </SubscriptionProvider>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {userToken ? (
+                // User is signed in
+                <>
+                    <Stack.Screen name="Main" component={MainTabNavigator} />
+                    <Stack.Screen name="Courses" component={CoursesScreen} />
+                    <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
+                    <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
+                    <Stack.Screen
+                        name="HelpSupport"
+                        component={HelpSupportScreen}
+                        options={{
+                            headerShown: true,
+                            title: 'Help & Support',
+                            headerStyle: {
+                                backgroundColor: '#fff',
+                            },
+                            headerTintColor: '#333',
+                            headerTitleStyle: {
+                                fontWeight: 'bold',
+                            },
+                        }}
+                    />
+                    <Stack.Screen
+                        name="TermsPrivacy"
+                        component={TermsPrivacyScreen}
+                        options={{
+                            headerShown: true,
+                            title: 'Terms & Privacy',
+                            headerStyle: {
+                                backgroundColor: '#fff',
+                            },
+                            headerTintColor: '#333',
+                            headerTitleStyle: {
+                                fontWeight: 'bold',
+                            },
+                        }}
+                    />
+                    <Stack.Screen
+                        name="FAQs"
+                        component={FAQsScreen}
+                        options={{
+                            headerShown: true,
+                            title: 'Frequently Asked Questions',
+                            headerStyle: {
+                                backgroundColor: '#fff',
+                            },
+                            headerTintColor: '#333',
+                            headerTitleStyle: {
+                                fontWeight: 'bold',
+                            },
+                        }}
+                    />
+                    <Stack.Screen
+                        name="UserGuide"
+                        component={UserGuideScreen}
+                        options={{
+                            headerShown: true,
+                            title: 'User Guide',
+                            headerStyle: {
+                                backgroundColor: '#fff',
+                            },
+                            headerTintColor: '#333',
+                            headerTitleStyle: {
+                                fontWeight: 'bold',
+                            },
+                        }}
+                    />
+                    <Stack.Screen
+                        name="ReportIssue"
+                        component={ReportIssueScreen}
+                        options={{
+                            headerShown: true,
+                            title: 'Report an Issue',
+                            headerStyle: {
+                                backgroundColor: '#fff',
+                            },
+                            headerTintColor: '#333',
+                            headerTitleStyle: {
+                                fontWeight: 'bold',
+                            },
+                        }}
+                    />
+                </>
+            ) : (
+                // User is not signed in
+                <>
+                    <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+                    <Stack.Screen name="Login" component={LoginScreen} />
+                    <Stack.Screen name="Register" component={RegisterScreen} />
+                </>
+            )}
+        </Stack.Navigator>
     );
 };
 

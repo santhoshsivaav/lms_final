@@ -129,59 +129,17 @@ const CourseDetail = () => {
                                 <Typography variant="h6" color="primary">
                                     ${course.price}
                                 </Typography>
-                                {!user?.isSubscribed && (
-                                    <Button
-                                        variant="contained"
-                                        color="secondary"
-                                        size="large"
-                                        onClick={() => {/* handle subscribe logic here */ }}
-                                    >
-                                        Subscribe to access all content
-                                    </Button>
-                                )}
                             </Box>
                         </Box>
                     </Card>
                 </Grid>
 
                 {/* Course Content */}
-                <Grid item xs={12} md={8}>
-                    {selectedVideo ? (
-                        <Paper sx={{ p: 2 }}>
-                            <video
-                                controls
-                                width="100%"
-                                src={selectedVideo.url}
-                                onTimeUpdate={(e) => handleVideoProgress(selectedVideo._id, e.target.currentTime)}
-                                onEnded={() => handleVideoComplete(selectedVideo._id)}
-                            />
-                            <Typography variant="h6" sx={{ mt: 2 }}>
-                                {selectedVideo.title}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {selectedVideo.description}
-                            </Typography>
-                        </Paper>
-                    ) : (
-                        <Paper sx={{ p: 2, textAlign: 'center' }}>
-                            <Typography variant="h6" color="text.secondary">
-                                Select a video to start learning
-                            </Typography>
-                        </Paper>
-                    )}
-                </Grid>
-
-                {/* Course Modules */}
                 <Grid item xs={12} md={4}>
                     <Paper sx={{ p: 2 }}>
                         <Typography variant="h6" gutterBottom>
                             Course Content
                         </Typography>
-                        {!user?.isSubscribed && (
-                            <Alert severity="info" sx={{ mb: 2 }}>
-                                Subscribe to unlock all lessons and videos!
-                            </Alert>
-                        )}
                         <List>
                             {course.modules.map((module) => (
                                 <React.Fragment key={module._id}>
@@ -191,34 +149,6 @@ const CourseDetail = () => {
                                             secondary={`${module.lessons.length} lessons`}
                                         />
                                     </ListItem>
-                                    <List component="div" disablePadding>
-                                        {module.lessons.map((lesson) => {
-                                            const isLocked = !user?.isSubscribed && !lesson.isPreview;
-                                            return (
-                                                <ListItem
-                                                    key={lesson._id}
-                                                    button={!isLocked}
-                                                    onClick={() => !isLocked && handleVideoSelect(lesson)}
-                                                    sx={{ pl: 4, opacity: isLocked ? 0.5 : 1 }}
-                                                >
-                                                    <ListItemIcon>
-                                                        {progress[lesson._id]?.completed ? (
-                                                            <CheckIcon color="success" />
-                                                        ) : isLocked ? (
-                                                            <LockIcon color="disabled" />
-                                                        ) : (
-                                                            <PlayIcon />
-                                                        )}
-                                                    </ListItemIcon>
-                                                    <ListItemText
-                                                        primary={lesson.title}
-                                                        secondary={`${lesson.duration} min`}
-                                                    />
-                                                </ListItem>
-                                            );
-                                        })}
-                                    </List>
-                                    <Divider />
                                 </React.Fragment>
                             ))}
                         </List>

@@ -68,9 +68,9 @@ export const courseService = {
     },
 
     // Update video progress
-    updateVideoProgress: async (videoId, progress) => {
+    updateVideoProgress: async (courseId, videoId, progress) => {
         try {
-            const response = await api.post(`/videos/${videoId}/progress`, { progress });
+            const response = await api.post(`/courses/${courseId}/lesson/${videoId}/progress`, { progress });
             if (!response.data.success) {
                 throw new Error(response.data.message || 'Failed to update video progress');
             }
@@ -82,9 +82,9 @@ export const courseService = {
     },
 
     // Mark video as completed
-    markVideoCompleted: async (videoId) => {
+    markVideoCompleted: async (courseId, videoId) => {
         try {
-            const response = await api.post(`/videos/${videoId}/complete`);
+            const response = await api.post(`/courses/${courseId}/lesson/${videoId}/complete`);
             if (!response.data.success) {
                 throw new Error(response.data.message || 'Failed to mark video as completed');
             }
@@ -139,18 +139,9 @@ export const courseService = {
             if (!response.data.success) {
                 throw new Error(response.data.message || 'Failed to fetch video player URL');
             }
-
-            // Ensure we have a video URL in the response
-            if (!response.data.data?.videoUrl) {
-                throw new Error('No video URL found in the response');
-            }
-
             return response.data.data;
         } catch (error) {
             console.error('Error in getVideoPlayerUrl:', error);
-            if (error.response?.status === 401) {
-                throw new Error('Please log in to access this video');
-            }
             throw error;
         }
     },

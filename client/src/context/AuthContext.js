@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { authService } from '../services/authService';
 
 // Create the context
@@ -17,8 +17,8 @@ export const AuthProvider = ({ children }) => {
 
     const loadUser = async () => {
         try {
-            const userData = await AsyncStorage.getItem('user');
-            const token = await AsyncStorage.getItem('token');
+            const userData = await SecureStore.getItemAsync('user');
+            const token = await SecureStore.getItemAsync('authToken');
             if (userData && token) {
                 setUser(JSON.parse(userData));
                 setUserToken(token);
@@ -45,8 +45,8 @@ export const AuthProvider = ({ children }) => {
             if (response.success) {
                 const { token, user: userData } = response.data;
                 console.log('Registration response:', response.data); // Debug log
-                await AsyncStorage.setItem('user', JSON.stringify(userData));
-                await AsyncStorage.setItem('token', token);
+                await SecureStore.setItemAsync('user', JSON.stringify(userData));
+                await SecureStore.setItemAsync('authToken', token);
                 setUser(userData);
                 setUserToken(token);
                 return true;
@@ -63,15 +63,23 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const login = async (token, userData) => {
+    const login = async (email, password) => {
         try {
             setIsLoading(true);
             setError(null);
 
-            // Set the user data and token
-            setUser(userData);
-            setUserToken(token);
-            return true;
+            const response = await authService.login(email, password);
+
+            if (response.token && response.user) {
+                await SecureStore.setItemAsync('user', JSON.stringify(response.user));
+                await SecureStore.setItemAsync('authToken', response.token);
+                setUser(response.user);
+                setUserToken(response.token);
+                return true;
+            } else {
+                setError('Invalid response from server');
+                return false;
+            }
         } catch (error) {
             console.error('Login error:', error);
             setError(error.message || 'An error occurred during login');
@@ -84,8 +92,8 @@ export const AuthProvider = ({ children }) => {
     const logout = async () => {
         try {
             setIsLoading(true);
-            await AsyncStorage.removeItem('user');
-            await AsyncStorage.removeItem('token');
+            await SecureStore.deleteItemAsync('user');
+            await SecureStore.deleteItemAsync('authToken');
             setUser(null);
             setUserToken(null);
         } catch (error) {
@@ -104,7 +112,7 @@ export const AuthProvider = ({ children }) => {
 
             if (response.success) {
                 const updatedUser = { ...user, preferredCategories };
-                await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+                await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
                 setUser(updatedUser);
                 return true;
             } else {

@@ -90,7 +90,7 @@ const Courses = () => {
     const fetchCourses = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://192.168.75.119:5000/api/courses', {
+            const response = await fetch('http://192.168.1.5:5000/api/courses', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -124,7 +124,7 @@ const Courses = () => {
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch('http://192.168.75.119:5000/api/categories', {
+            const response = await fetch('http://192.168.1.5:5000/api/categories', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -496,8 +496,8 @@ const Courses = () => {
             };
 
             const url = editingCourse
-                ? `http://192.168.75.119:5000/api/courses/${editingCourse._id}`
-                : 'http://192.168.75.119:5000/api/courses';
+                ? `http://192.168.1.5:5000/api/courses/${editingCourse._id}`
+                : 'http://192.168.1.5:5000/api/courses';
 
             console.log('Submitting course data:', formattedData);
 

@@ -5,6 +5,11 @@ const { auth, admin } = require('../../middleware/auth');
 
 // Public routes
 router.get('/', courseController.getAllCourses);
+
+// Protected routes
+router.get('/user-categories', auth, courseController.getCoursesByUserCategories);
+
+// Parameterized routes
 router.get('/:id', courseController.getCourseById);
 
 // Protected routes (admin only)

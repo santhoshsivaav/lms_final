@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://192.168.75.119:5000/api';
+const API_URL = 'http://192.168.1.5:5000/api';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -46,12 +46,9 @@ export const userService = {
     getSubscription: () => api.get('/users/subscription'),
 };
 
-// Subscription services
+// Remove subscription services
 export const subscriptionService = {
-    getPlans: () => api.get('/subscriptions/plans'),
-    subscribe: (planId) => api.post('/subscriptions/subscribe', { planId }),
-    cancel: () => api.post('/subscriptions/cancel'),
-    getHistory: () => api.get('/subscriptions/history'),
+    // Removed subscription-related endpoints
 };
 
 export default api; 

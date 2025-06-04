@@ -68,8 +68,8 @@ const MyCoursesScreen = ({ navigation }) => {
         try {
             setError(null);
             setLoading(true);
-            const response = await courseService.getAllCourses();
-            setCourses(response.data || []);
+            const response = await courseService.getCoursesByUserCategories();
+            setCourses(response || []);
         } catch (err) {
             console.error('Error fetching courses:', err);
             setError('Failed to load courses. Please try again.');
@@ -102,8 +102,18 @@ const MyCoursesScreen = ({ navigation }) => {
             <Ionicons name="book-outline" size={64} color={COLORS.gray} />
             <Text style={styles.emptyTitle}>No courses available</Text>
             <Text style={styles.emptyDescription}>
-                There are no courses available at the moment. Please check back later.
+                {user?.preferredCategories?.length > 0
+                    ? "There are no courses available in your preferred categories. Please check back later or update your preferences."
+                    : "You haven't set any preferred categories yet. Update your profile to see courses that match your interests."}
             </Text>
+            <TouchableOpacity
+                style={styles.updatePreferencesButton}
+                onPress={() => navigation.navigate('Profile')}
+            >
+                <Text style={styles.updatePreferencesButtonText}>
+                    {user?.preferredCategories?.length > 0 ? 'Update Preferences' : 'Set Preferences'}
+                </Text>
+            </TouchableOpacity>
         </View>
     );
 
@@ -280,6 +290,18 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 24,
         lineHeight: 24,
+    },
+    updatePreferencesButton: {
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 8,
+        marginTop: 16,
+    },
+    updatePreferencesButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     },
 });
 
