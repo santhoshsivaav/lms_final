@@ -39,11 +39,11 @@ This is the mobile client for the Learning Management System (LMS) app built wit
 Create a `.env` file in the client directory with the following variables:
 
 ```
-API_URL=http://192.168.75.119:5000/api
+API_URL=http://192.168.219.119:5000/api
 RAZORPAY_KEY_ID=your_razorpay_key_id
 ```
 
-Note: Replace `192.168.75.119` with your server's IP address or domain.
+Note: Replace `192.168.219.119` with your server's IP address or domain.
 
 ## Running the App
 

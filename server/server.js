@@ -34,7 +34,7 @@ app.use(morgan('dev'));
 
 // Configure CORS
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://192.168.1.5:3000', 'exp://192.168.1.5:19000', 'exp://192.168.1.5:8081', 'http://192.168.1.5:5000', 'http://localhost:5000'],
+    origin: ['http://localhost:3000', 'http://192.168.219.119:3000', 'exp://192.168.219.119:19000', 'exp://192.168.219.119:8081', 'http://192.168.219.119:5000', 'http://localhost:5000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -112,6 +112,6 @@ app.use((req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '192.168.1.5', () => {
-    console.log(`Server is running on http://192.168.1.5:${PORT}`);
+app.listen(PORT, '192.168.219.119', () => {
+    console.log(`Server is running on http://192.168.219.119:${PORT}`);
 });

@@ -12,10 +12,12 @@ const lessonSchema = new mongoose.Schema({
   },
   type: {
     type: String,
+    enum: ['video', 'pdf'],
     default: 'video'
   },
   content: {
-    videoUrl: String
+    videoUrl: String,
+    pdfUrl: String
   },
   order: {
     type: Number,

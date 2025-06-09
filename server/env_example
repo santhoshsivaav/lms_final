@@ -13,8 +13,8 @@ SMTP_USER=santhoshsivaa1@gmail.com
 SMTP_PASS=mssnulssiofqeopn
 SMTP_FROM=santhoshsivaa1@gmail.com
 NODE_ENV=development
-CLIENT_URL=http://192.168.1.5:8081
-ADMIN_URL=http://192.168.1.5:3000
+CLIENT_URL=http://192.168.219.119:8081
+ADMIN_URL=http://192.168.219.119:3000
 
 
 

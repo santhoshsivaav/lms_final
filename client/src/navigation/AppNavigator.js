@@ -19,6 +19,7 @@ import TermsPrivacyScreen from '../screens/TermsPrivacyScreen';
 import FAQsScreen from '../screens/FAQsScreen';
 import UserGuideScreen from '../screens/UserGuideScreen';
 import ReportIssueScreen from '../screens/ReportIssueScreen';
+import PDFViewer from '../components/PDFViewer';
 
 // Context
 import { AuthContext } from '../context/AuthContext';
@@ -89,6 +90,21 @@ const AppNavigator = () => {
                     <Stack.Screen name="Courses" component={CoursesScreen} />
                     <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
                     <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
+                    <Stack.Screen
+                        name="PDFViewer"
+                        component={PDFViewer}
+                        options={{
+                            headerShown: true,
+                            title: 'PDF Viewer',
+                            headerStyle: {
+                                backgroundColor: '#fff',
+                            },
+                            headerTintColor: '#333',
+                            headerTitleStyle: {
+                                fontWeight: 'bold',
+                            },
+                        }}
+                    />
                     <Stack.Screen
                         name="HelpSupport"
                         component={HelpSupportScreen}

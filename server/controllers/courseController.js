@@ -392,6 +392,29 @@ const createCourse = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid category' });
         }
 
+        // Validate modules and lessons
+        if (modules && modules.length > 0) {
+            for (const module of modules) {
+                if (module.lessons && module.lessons.length > 0) {
+                    for (const lesson of module.lessons) {
+                        if (lesson.type === 'video' && !lesson.content?.videoUrl) {
+                            return res.status(400).json({
+                                success: false,
+                                message: `Video URL is required for video lessons in module "${module.title}"`
+                            });
+                        }
+                        if (lesson.type === 'pdf' && !lesson.content?.pdfUrl) {
+                            return res.status(400).json({
+                                success: false,
+                                message: `PDF URL is required for PDF lessons in module "${module.title}"`
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Create the course with proper content structure
         const course = new Course({
             title,
             description,
@@ -399,7 +422,21 @@ const createCourse = async (req, res) => {
             category,
             tags: tags || [],
             skills: skills || [],
-            modules: modules || [],
+            modules: modules.map(module => ({
+                title: module.title,
+                description: module.description,
+                order: module.order,
+                lessons: module.lessons.map(lesson => ({
+                    title: lesson.title,
+                    description: lesson.description,
+                    type: lesson.type,
+                    content: {
+                        videoUrl: lesson.type === 'video' ? (lesson.content?.videoUrl || null) : null,
+                        pdfUrl: lesson.type === 'pdf' ? (lesson.content?.pdfUrl || null) : null
+                    },
+                    order: lesson.order
+                }))
+            })),
             status: 'draft'
         });
 
@@ -434,7 +471,18 @@ const updateCourse = async (req, res) => {
         if (thumbnail) course.thumbnail = thumbnail;
         if (tags) course.tags = tags;
         if (skills) course.skills = skills;
-        if (modules) course.modules = modules;
+        if (modules) {
+            course.modules = modules.map(module => ({
+                ...module,
+                lessons: module.lessons.map(lesson => ({
+                    ...lesson,
+                    content: {
+                        videoUrl: lesson.type === 'video' ? (lesson.content?.videoUrl || null) : null,
+                        pdfUrl: lesson.type === 'pdf' ? (lesson.content?.pdfUrl || null) : null
+                    }
+                }))
+            }));
+        }
 
         // Save updated course
         await course.save();

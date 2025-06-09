@@ -34,12 +34,17 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    Stack,
+    Divider,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 const Courses = () => {
     const navigate = useNavigate();
@@ -75,7 +80,8 @@ const Courses = () => {
         description: '',
         type: 'video',
         content: {
-            videoUrl: ''
+            videoUrl: '',
+            pdfUrl: ''
         },
         order: 1
     });
@@ -90,7 +96,7 @@ const Courses = () => {
     const fetchCourses = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://192.168.1.5:5000/api/courses', {
+            const response = await fetch('http://192.168.219.119:5000/api/courses', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -124,7 +130,7 @@ const Courses = () => {
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch('http://192.168.1.5:5000/api/categories', {
+            const response = await fetch('http://192.168.219.119:5000/api/categories', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -189,7 +195,8 @@ const Courses = () => {
             description: '',
             type: 'video',
             content: {
-                videoUrl: ''
+                videoUrl: '',
+                pdfUrl: ''
             },
             order: 1
         });
@@ -224,7 +231,7 @@ const Courses = () => {
         }
     };
 
-    const handleVideoUpload = async (event, moduleIndex, lessonIndex) => {
+    const handleFileUpload = async (event, moduleIndex, lessonIndex) => {
         const file = event.target.files[0];
         if (file) {
             setUploadingVideo(true);
@@ -234,8 +241,10 @@ const Courses = () => {
                 formData.append('upload_preset', 'ml_default');
                 formData.append('cloud_name', 'doxxdj16r');
 
+                // Determine resource type based on file type
+                const resourceType = file.type.startsWith('video/') ? 'video' : 'raw';
                 const response = await fetch(
-                    `https://api.cloudinary.com/v1_1/doxxdj16r/video/upload`,
+                    `https://api.cloudinary.com/v1_1/doxxdj16r/${resourceType}/upload`,
                     {
                         method: 'POST',
                         body: formData,
@@ -243,19 +252,31 @@ const Courses = () => {
                 );
 
                 const data = await response.json();
+                console.log('Upload response:', data);
 
                 if (moduleIndex !== undefined && lessonIndex !== undefined) {
                     // Editing existing lesson
-                    handleEditLesson(moduleIndex, lessonIndex, 'videoUrl', data.secure_url);
+                    const field = file.type.startsWith('video/') ? 'videoUrl' : 'pdfUrl';
+                    const type = file.type.startsWith('video/') ? 'video' : 'pdf';
+                    handleEditLesson(moduleIndex, lessonIndex, 'type', type);
+                    handleEditLesson(moduleIndex, lessonIndex, field, data.secure_url);
                 } else {
                     // Adding new lesson
+                    const field = file.type.startsWith('video/') ? 'videoUrl' : 'pdfUrl';
+                    const type = file.type.startsWith('video/') ? 'video' : 'pdf';
                     setCurrentLesson(prev => ({
                         ...prev,
-                        content: { ...prev.content, videoUrl: data.secure_url }
+                        type: type,
+                        content: {
+                            ...prev.content,
+                            [field]: data.secure_url,
+                            [field === 'videoUrl' ? 'pdfUrl' : 'videoUrl']: ''
+                        }
                     }));
                 }
             } catch (err) {
-                setError('Failed to upload video');
+                console.error('Upload error:', err);
+                setError('Failed to upload file');
             } finally {
                 setUploadingVideo(false);
             }
@@ -316,7 +337,9 @@ const Courses = () => {
     };
 
     const handleAddLesson = (moduleIndex) => {
-        if (currentLesson.title && currentLesson.description && currentLesson.content.videoUrl) {
+        if (currentLesson.title && currentLesson.description &&
+            ((currentLesson.type === 'video' && currentLesson.content.videoUrl) ||
+                (currentLesson.type === 'pdf' && currentLesson.content.pdfUrl))) {
             setFormData(prev => ({
                 ...prev,
                 modules: prev.modules.map((module, index) => {
@@ -337,7 +360,8 @@ const Courses = () => {
                 description: '',
                 type: 'video',
                 content: {
-                    videoUrl: ''
+                    videoUrl: '',
+                    pdfUrl: ''
                 },
                 order: 1
             });
@@ -395,10 +419,10 @@ const Courses = () => {
                         ...module,
                         lessons: module.lessons.map((lesson, lIndex) => {
                             if (lIndex === lessonIndex) {
-                                if (field === 'videoUrl') {
+                                if (field === 'videoUrl' || field === 'pdfUrl') {
                                     return {
                                         ...lesson,
-                                        content: { ...lesson.content, videoUrl: value }
+                                        content: { ...lesson.content, [field]: value }
                                     };
                                 }
                                 return { ...lesson, [field]: value };
@@ -444,8 +468,11 @@ const Courses = () => {
                         if (!lesson.description?.trim()) {
                             errors.push(`Module ${index + 1}, Lesson ${lessonIndex + 1}: Description is required`);
                         }
-                        if (!lesson.content?.videoUrl) {
+                        if (lesson.type === 'video' && !lesson.content?.videoUrl) {
                             errors.push(`Module ${index + 1}, Lesson ${lessonIndex + 1}: Video is required`);
+                        }
+                        if (lesson.type === 'pdf' && !lesson.content?.pdfUrl) {
+                            errors.push(`Module ${index + 1}, Lesson ${lessonIndex + 1}: PDF is required`);
                         }
                     });
                 }
@@ -486,62 +513,44 @@ const Courses = () => {
                     lessons: module.lessons.map((lesson, lessonIndex) => ({
                         title: lesson.title,
                         description: lesson.description,
-                        type: 'video',
+                        type: lesson.type,
                         content: {
-                            videoUrl: lesson.content.videoUrl
+                            videoUrl: lesson.type === 'video' ? lesson.content.videoUrl : '',
+                            pdfUrl: lesson.type === 'pdf' ? lesson.content.pdfUrl : ''
                         },
                         order: lessonIndex + 1
                     }))
                 }))
             };
 
-            const url = editingCourse
-                ? `http://192.168.1.5:5000/api/courses/${editingCourse._id}`
-                : 'http://192.168.1.5:5000/api/courses';
-
             console.log('Submitting course data:', formattedData);
+
+            const url = editingCourse
+                ? `http://192.168.219.119:5000/api/courses/${editingCourse._id}`
+                : 'http://192.168.219.119:5000/api/courses';
 
             const response = await fetch(url, {
                 method: editingCourse ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(formattedData),
+                body: JSON.stringify(formattedData)
             });
 
-            const result = await response.json();
-            console.log('Server response:', result);
-
-            if (response.ok && result.data) {
-                // Show success message
-                setSuccessMessage(editingCourse ? 'Course updated successfully!' : 'Course created successfully!');
-                setShowSuccess(true);
-
-                // Close the dialog
-                handleCloseDialog();
-
-                // Refresh the courses list
-                await fetchCourses();
-
-                // Wait for 2 seconds to show the success message before redirecting
-                setTimeout(() => {
-                    navigate('/courses');
-                }, 2000);
-            } else {
-                if (response.status === 401) {
-                    setError('Authentication failed. Please login again.');
-                    // Optionally redirect to login page
-                    setTimeout(() => {
-                        navigate('/login');
-                    }, 2000);
-                } else {
-                    setError(result.message || 'Failed to save course');
-                }
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to save course');
             }
-        } catch (err) {
-            console.error('Error saving course:', err);
-            setError('An error occurred while saving the course');
+
+            const data = await response.json();
+            setSuccessMessage(editingCourse ? 'Course updated successfully' : 'Course created successfully');
+            setShowSuccess(true);
+            setOpenDialog(false);
+            fetchCourses();
+        } catch (error) {
+            console.error('Error saving course:', error);
+            setError(error.message || 'Failed to save course');
         }
     };
 
@@ -835,108 +844,163 @@ const Courses = () => {
 
                                             <Typography variant="subtitle1" gutterBottom>Module Lessons</Typography>
                                             {module.lessons.map((lesson, lessonIndex) => (
-                                                <Paper key={lessonIndex} sx={{ p: 2, mb: 2 }}>
-                                                    <TextField
-                                                        fullWidth
-                                                        label="Lesson Title"
-                                                        value={lesson.title}
-                                                        onChange={(e) => handleEditLesson(moduleIndex, lessonIndex, 'title', e.target.value)}
-                                                        sx={{ mb: 2 }}
-                                                    />
-                                                    <TextField
-                                                        fullWidth
-                                                        label="Lesson Description"
-                                                        multiline
-                                                        rows={2}
-                                                        value={lesson.description}
-                                                        onChange={(e) => handleEditLesson(moduleIndex, lessonIndex, 'description', e.target.value)}
-                                                        sx={{ mb: 2 }}
-                                                    />
-                                                    <Box sx={{ mb: 2 }}>
-                                                        <Typography variant="subtitle2" gutterBottom>Video</Typography>
-                                                        <input
-                                                            accept="video/*"
-                                                            type="file"
-                                                            id={`video-upload-${moduleIndex}-${lessonIndex}`}
-                                                            onChange={(e) => handleVideoUpload(e, moduleIndex, lessonIndex)}
-                                                            style={{ display: 'none' }}
-                                                        />
-                                                        <label htmlFor={`video-upload-${moduleIndex}-${lessonIndex}`}>
-                                                            <Button
-                                                                variant="outlined"
-                                                                component="span"
-                                                                startIcon={<VideoLibraryIcon />}
-                                                                disabled={uploadingVideo}
-                                                            >
-                                                                {uploadingVideo ? 'Uploading...' : 'Upload Video'}
-                                                            </Button>
-                                                        </label>
-                                                        {lesson.content.videoUrl && (
-                                                            <Box sx={{ mt: 1 }}>
-                                                                <Typography variant="body2" color="success.main">
-                                                                    Video uploaded successfully
+                                                <Card key={lessonIndex} variant="outlined" sx={{ mb: 2 }}>
+                                                    <CardContent>
+                                                        <Stack spacing={2}>
+                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <Typography variant="h6">
+                                                                    Lesson {lessonIndex + 1}: {lesson.title}
                                                                 </Typography>
-                                                                <Typography variant="body2" color="text.secondary">
-                                                                    URL: {lesson.content.videoUrl}
-                                                                </Typography>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => handleRemoveLesson(moduleIndex, lessonIndex)}
+                                                                    color="error"
+                                                                >
+                                                                    <DeleteIcon />
+                                                                </IconButton>
                                                             </Box>
-                                                        )}
-                                                    </Box>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleRemoveLesson(moduleIndex, lessonIndex)}
-                                                        color="error"
-                                                    >
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </Paper>
+
+                                                            <Typography variant="body2" color="text.secondary">
+                                                                {lesson.description}
+                                                            </Typography>
+
+                                                            <Box>
+                                                                <Chip
+                                                                    icon={lesson.type === 'video' ? <VideoLibraryIcon /> : <PictureAsPdfIcon />}
+                                                                    label={lesson.type === 'video' ? 'Video Lesson' : 'PDF Document'}
+                                                                    color="primary"
+                                                                    variant="outlined"
+                                                                />
+                                                            </Box>
+
+                                                            <Box>
+                                                                <input
+                                                                    accept={lesson.type === 'video' ? 'video/*' : 'application/pdf'}
+                                                                    type="file"
+                                                                    id={`file-upload-${moduleIndex}-${lessonIndex}`}
+                                                                    onChange={(e) => handleFileUpload(e, moduleIndex, lessonIndex)}
+                                                                    style={{ display: 'none' }}
+                                                                />
+                                                                <label htmlFor={`file-upload-${moduleIndex}-${lessonIndex}`}>
+                                                                    <Button
+                                                                        variant="outlined"
+                                                                        component="span"
+                                                                        startIcon={<CloudUploadIcon />}
+                                                                        disabled={uploadingVideo}
+                                                                    >
+                                                                        {uploadingVideo ? 'Uploading...' : `Replace ${lesson.type === 'video' ? 'Video' : 'PDF'}`}
+                                                                    </Button>
+                                                                </label>
+                                                            </Box>
+
+                                                            {(lesson.content?.videoUrl || lesson.content?.pdfUrl) && (
+                                                                <Alert severity="success">
+                                                                    {lesson.type === 'video' ? 'Video' : 'PDF'} uploaded successfully
+                                                                </Alert>
+                                                            )}
+                                                        </Stack>
+                                                    </CardContent>
+                                                </Card>
                                             ))}
 
-                                            <Box sx={{ mt: 2 }}>
-                                                <Typography variant="subtitle2" gutterBottom>Add New Lesson</Typography>
-                                                <TextField
-                                                    fullWidth
-                                                    label="Lesson Title"
-                                                    value={currentLesson.title}
-                                                    onChange={(e) => setCurrentLesson(prev => ({ ...prev, title: e.target.value }))}
-                                                    sx={{ mb: 1 }}
-                                                />
-                                                <TextField
-                                                    fullWidth
-                                                    label="Lesson Description"
-                                                    multiline
-                                                    rows={2}
-                                                    value={currentLesson.description}
-                                                    onChange={(e) => setCurrentLesson(prev => ({ ...prev, description: e.target.value }))}
-                                                    sx={{ mb: 1 }}
-                                                />
-                                                <Box sx={{ mb: 1 }}>
-                                                    <input
-                                                        accept="video/*"
-                                                        type="file"
-                                                        id={`new-video-upload-${moduleIndex}`}
-                                                        onChange={(e) => handleVideoUpload(e, moduleIndex)}
-                                                        style={{ display: 'none' }}
-                                                    />
-                                                    <label htmlFor={`new-video-upload-${moduleIndex}`}>
+                                            <Box sx={{ mb: 3 }}>
+                                                <Card variant="outlined">
+                                                    <CardContent>
+                                                        <Typography variant="h6" gutterBottom>
+                                                            Add New Lesson
+                                                        </Typography>
+                                                        <Stack spacing={2}>
+                                                            <TextField
+                                                                fullWidth
+                                                                label="Lesson Title"
+                                                                value={currentLesson.title}
+                                                                onChange={(e) => setCurrentLesson(prev => ({
+                                                                    ...prev,
+                                                                    title: e.target.value
+                                                                }))}
+                                                            />
+                                                            <TextField
+                                                                fullWidth
+                                                                label="Lesson Description"
+                                                                multiline
+                                                                rows={3}
+                                                                value={currentLesson.description}
+                                                                onChange={(e) => setCurrentLesson(prev => ({
+                                                                    ...prev,
+                                                                    description: e.target.value
+                                                                }))}
+                                                            />
+                                                            <FormControl fullWidth>
+                                                                <InputLabel>Lesson Type</InputLabel>
+                                                                <Select
+                                                                    value={currentLesson.type}
+                                                                    label="Lesson Type"
+                                                                    onChange={(e) => setCurrentLesson(prev => ({
+                                                                        ...prev,
+                                                                        type: e.target.value,
+                                                                        content: {
+                                                                            videoUrl: '',
+                                                                            pdfUrl: ''
+                                                                        }
+                                                                    }))}
+                                                                >
+                                                                    <MenuItem value="video">
+                                                                        <Stack direction="row" spacing={1} alignItems="center">
+                                                                            <VideoLibraryIcon />
+                                                                            <Typography>Video Lesson</Typography>
+                                                                        </Stack>
+                                                                    </MenuItem>
+                                                                    <MenuItem value="pdf">
+                                                                        <Stack direction="row" spacing={1} alignItems="center">
+                                                                            <PictureAsPdfIcon />
+                                                                            <Typography>PDF Document</Typography>
+                                                                        </Stack>
+                                                                    </MenuItem>
+                                                                </Select>
+                                                            </FormControl>
+
+                                                            <Box>
+                                                                <input
+                                                                    accept={currentLesson.type === 'video' ? 'video/*' : 'application/pdf'}
+                                                                    type="file"
+                                                                    id="new-lesson-file-upload"
+                                                                    onChange={(e) => handleFileUpload(e)}
+                                                                    style={{ display: 'none' }}
+                                                                />
+                                                                <label htmlFor="new-lesson-file-upload">
+                                                                    <Button
+                                                                        variant="contained"
+                                                                        component="span"
+                                                                        startIcon={<CloudUploadIcon />}
+                                                                        disabled={uploadingVideo}
+                                                                        fullWidth
+                                                                        sx={{ mb: 1 }}
+                                                                    >
+                                                                        {uploadingVideo ? 'Uploading...' : `Upload ${currentLesson.type === 'video' ? 'Video' : 'PDF'}`}
+                                                                    </Button>
+                                                                </label>
+                                                                {(currentLesson.content?.videoUrl || currentLesson.content?.pdfUrl) && (
+                                                                    <Alert severity="success" sx={{ mt: 1 }}>
+                                                                        {currentLesson.type === 'video' ? 'Video' : 'PDF'} uploaded successfully
+                                                                    </Alert>
+                                                                )}
+                                                            </Box>
+                                                        </Stack>
+                                                    </CardContent>
+                                                    <CardActions>
                                                         <Button
-                                                            variant="outlined"
-                                                            component="span"
-                                                            startIcon={<VideoLibraryIcon />}
-                                                            disabled={uploadingVideo}
+                                                            variant="contained"
+                                                            color="primary"
+                                                            onClick={() => handleAddLesson(moduleIndex)}
+                                                            disabled={!currentLesson.title || !currentLesson.description ||
+                                                                (currentLesson.type === 'video' && !currentLesson.content?.videoUrl) ||
+                                                                (currentLesson.type === 'pdf' && !currentLesson.content?.pdfUrl)}
+                                                            startIcon={<AddIcon />}
                                                         >
-                                                            {uploadingVideo ? 'Uploading...' : 'Upload Video'}
+                                                            Add Lesson
                                                         </Button>
-                                                    </label>
-                                                </Box>
-                                                <Button
-                                                    variant="contained"
-                                                    onClick={() => handleAddLesson(moduleIndex)}
-                                                    startIcon={<AddIcon />}
-                                                    disabled={!currentLesson.title || !currentLesson.description || !currentLesson.content.videoUrl}
-                                                >
-                                                    Add Lesson to Module
-                                                </Button>
+                                                    </CardActions>
+                                                </Card>
                                             </Box>
 
                                             <IconButton

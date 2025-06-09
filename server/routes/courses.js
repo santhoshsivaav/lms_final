@@ -40,10 +40,12 @@ const upload = multer({
         fileSize: 500 * 1024 * 1024, // 500MB limit
     },
     fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
+        if (file.mimetype.startsWith('video/') ||
+            file.mimetype.startsWith('image/') ||
+            file.mimetype === 'application/pdf') {
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type. Only videos and images are allowed.'));
+            cb(new Error('Invalid file type. Only videos, images, and PDFs are allowed.'));
         }
     }
 });

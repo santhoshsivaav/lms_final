@@ -9,7 +9,8 @@ import {
     ActivityIndicator,
     ScrollView,
     Alert,
-    SafeAreaView
+    SafeAreaView,
+    Linking
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,22 @@ import { AuthContext } from '../../context/AuthContext';
 import { COLORS } from '../../constants/Colors';
 
 const LessonCard = ({ lesson, onPress, isLocked }) => {
+    const getLessonIcon = () => {
+        if (isLocked) {
+            return <Ionicons name="lock-closed" size={24} color="#e74c3c" />;
+        }
+
+        if (lesson.pdfUrl) {
+            return <Ionicons name="download" size={24} color="#3498db" />;
+        }
+
+        if (lesson.videoUrl) {
+            return <Ionicons name="play-circle" size={24} color="#3498db" />;
+        }
+
+        return <Ionicons name="document" size={24} color="#3498db" />;
+    };
+
     return (
         <TouchableOpacity
             style={styles.lessonCard}
@@ -30,11 +47,7 @@ const LessonCard = ({ lesson, onPress, isLocked }) => {
             </View>
 
             <View style={styles.lessonIconContainer}>
-                {isLocked ? (
-                    <Ionicons name="lock-closed" size={24} color="#e74c3c" />
-                ) : (
-                    <Ionicons name="play-circle" size={24} color="#3498db" />
-                )}
+                {getLessonIcon()}
             </View>
         </TouchableOpacity>
     );
@@ -85,17 +98,35 @@ const CourseDetailScreen = ({ route, navigation }) => {
         }
     };
 
-    const handleVideoPress = (lesson) => {
-        console.log('Navigating to video player with lesson:', {
+    const handleVideoPress = async (lesson) => {
+        console.log('Navigating to lesson:', {
             courseId,
             lessonId: lesson._id,
-            title: lesson.title
+            title: lesson.title,
+            type: lesson.type
         });
-        navigation.navigate('VideoPlayer', {
-            courseId,
-            videoId: lesson._id,
-            videoTitle: lesson.title
-        });
+
+        if (lesson.type === 'video' && lesson.content?.videoUrl) {
+            navigation.navigate('VideoPlayer', {
+                courseId,
+                videoId: lesson._id,
+                videoTitle: lesson.title
+            });
+        } else if (lesson.type === 'pdf' && lesson.content?.pdfUrl) {
+            try {
+                const supported = await Linking.canOpenURL(lesson.content.pdfUrl);
+                if (supported) {
+                    await Linking.openURL(lesson.content.pdfUrl);
+                } else {
+                    Alert.alert('Error', 'Cannot open PDF URL');
+                }
+            } catch (error) {
+                console.error('Error opening PDF:', error);
+                Alert.alert('Error', 'Failed to open PDF');
+            }
+        } else {
+            Alert.alert('Error', 'No content available for this lesson');
+        }
     };
 
     if (loading) {
