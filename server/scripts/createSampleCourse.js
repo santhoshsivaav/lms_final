@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Course = require('../models/Course');
 
-const MONGODB_URI = 'mongodb+srv://santhoshcursor:Sandyyunus03@lmsyunus.u3i9jfr.mongodb.net/lmsyunus';
+const MONGODB_URI = 'mongodb+srv://lmsyunus:yunus123@lmsapp.bq8bcni.mongodb.net/';
 
 const sampleCourse = {
     title: "Introduction to Web Development",

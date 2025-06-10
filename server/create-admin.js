@@ -3,7 +3,7 @@ const User = require('./models/User');
 const bcrypt = require('bcryptjs');
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://santhoshcursor:Sandyyunus03@lmsyunus.u3i9jfr.mongodb.net/lmsyunus')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://lmsyunus:yunus123@lmsapp.bq8bcni.mongodb.net/')
     .then(async () => {
         console.log('Connected to MongoDB');
         

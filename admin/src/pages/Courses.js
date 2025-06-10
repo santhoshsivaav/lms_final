@@ -210,11 +210,11 @@ const Courses = () => {
             try {
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('upload_preset', 'ml_default');
-                formData.append('cloud_name', 'doxxdj16r');
+                formData.append('upload_preset', 'lms_app');
+                formData.append('cloud_name', 'dzwr8crjj');
 
                 const response = await fetch(
-                    `https://api.cloudinary.com/v1_1/doxxdj16r/image/upload`,
+                    `https://api.cloudinary.com/v1_1/dzwr8crjj/image/upload`,
                     {
                         method: 'POST',
                         body: formData,
@@ -238,13 +238,13 @@ const Courses = () => {
             try {
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('upload_preset', 'ml_default');
-                formData.append('cloud_name', 'doxxdj16r');
+                formData.append('upload_preset', 'lms_app');
+                formData.append('cloud_name', 'dzwr8crjj');
 
                 // Determine resource type based on file type
                 const resourceType = file.type.startsWith('video/') ? 'video' : 'raw';
                 const response = await fetch(
-                    `https://api.cloudinary.com/v1_1/doxxdj16r/${resourceType}/upload`,
+                    `https://api.cloudinary.com/v1_1/dzwr8crjj/${resourceType}/upload`,
                     {
                         method: 'POST',
                         body: formData,
@@ -610,12 +610,12 @@ const Courses = () => {
                                     <CardMedia
                                         component="img"
                                         height="200"
-                                        image={course.thumbnail || 'https://res.cloudinary.com/doxxdj16r/image/upload/v1/samples/landscapes/nature-mountains.jpg'}
+                                        image={course.thumbnail || 'https://res.cloudinary.com/dzwr8crjj/image/upload/v1/samples/landscapes/nature-mountains.jpg'}
                                         alt={course.title}
                                         sx={{ objectFit: 'cover' }}
                                         onError={(e) => {
                                             e.target.onerror = null;
-                                            e.target.src = 'https://res.cloudinary.com/doxxdj16r/image/upload/v1/samples/landscapes/nature-mountains.jpg';
+                                            e.target.src = 'https://res.cloudinary.com/dzwr8crjj/image/upload/v1/samples/landscapes/nature-mountains.jpg';
                                         }}
                                     />
                                     <CardContent sx={{ flexGrow: 1 }}>
