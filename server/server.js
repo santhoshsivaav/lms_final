@@ -55,7 +55,7 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://lmsyunus:yunus123@lmsapp.bq8bcni.mongodb.net/', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://lmsyunus:yunus123@lmsfinal.qg4tbjb.mongodb.net/lmsyunus', {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })

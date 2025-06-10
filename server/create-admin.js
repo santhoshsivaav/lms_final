@@ -3,10 +3,10 @@ const User = require('./models/User');
 const bcrypt = require('bcryptjs');
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://lmsyunus:yunus123@lmsapp.bq8bcni.mongodb.net/')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://lmsyunus:yunus123@lmsfinal.qg4tbjb.mongodb.net/lmsyunus')
     .then(async () => {
         console.log('Connected to MongoDB');
-        
+
         try {
             // Check if admin already exists
             const adminExists = await User.findOne({ role: 'admin' });

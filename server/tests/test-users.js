@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 
 // Connect to MongoDB
-mongoose.connect('mongodb+srv://lmsyunus:yunus123@lmsapp.bq8bcni.mongodb.net/', {
+mongoose.connect('mongodb+srv://lmsyunus:yunus123@lmsfinal.qg4tbjb.mongodb.net/lmsyunus', {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
