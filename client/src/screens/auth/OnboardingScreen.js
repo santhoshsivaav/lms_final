@@ -26,13 +26,13 @@ const onboardingData = [
   {
     id: '2',
     title: 'Learn Anytime, Anywhere',
-    description: 'Access courses on your mobile device anytime, anywhere. Even download videos for offline viewing.',
+    description: 'Access courses on your mobile device anytime, anywhere',
     image: require('../../../assets/onboarding-2.png'),
   },
   {
     id: '3',
     title: 'Premium Content',
-    description: 'Subscribe to unlock premium content and get access to all courses and features.',
+    description: 'Unlock premium content and get access to all courses and features.',
     image: require('../../../assets/onboarding-3.png'),
   },
 ];

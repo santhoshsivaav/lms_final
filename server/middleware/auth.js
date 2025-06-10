@@ -7,6 +7,7 @@ const auth = async (req, res, next) => {
         // Get token from header
         const authHeader = req.header('Authorization');
         if (!authHeader) {
+            console.log('No Authorization header provided');
             return res.status(401).json({
                 success: false,
                 message: 'No authentication token provided'
@@ -16,6 +17,7 @@ const auth = async (req, res, next) => {
         // Remove 'Bearer ' from token
         const token = authHeader.replace('Bearer ', '');
         if (!token) {
+            console.log('No token found in Authorization header');
             return res.status(401).json({
                 success: false,
                 message: 'No authentication token provided'
@@ -27,26 +29,54 @@ const auth = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             console.log('Decoded token:', decoded);
 
-            // Find user
-            const user = await User.findById(decoded.id);
+            // Find user using id from token
+            const userId = decoded.id;
+            if (!userId) {
+                console.log('No user ID found in token:', decoded);
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid token format'
+                });
+            }
+
+            const user = await User.findById(userId);
             if (!user) {
+                console.log('User not found for ID:', userId);
                 return res.status(401).json({
                     success: false,
                     message: 'User not found'
                 });
             }
 
+            // Verify token payload matches user
+            if (decoded.email !== user.email || decoded.role !== user.role) {
+                console.log('Token payload mismatch:', {
+                    token: { email: decoded.email, role: decoded.role },
+                    user: { email: user.email, role: user.role }
+                });
+                return res.status(401).json({
+                    success: false,
+                    message: 'Token invalid - user data mismatch'
+                });
+            }
+
             // Set user in request
             req.user = user;
-            console.log('User set in request:', req.user._id);
+            console.log('User authenticated:', { id: user._id, email: user.email, role: user.role });
             req.token = token;
             req.hasActiveSubscription = user.hasActiveSubscription();
             next();
         } catch (error) {
             console.error('Token verification error:', error);
+            if (error.name === 'TokenExpiredError') {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Token expired'
+                });
+            }
             return res.status(401).json({
                 success: false,
-                message: 'Invalid or expired token'
+                message: 'Invalid token'
             });
         }
     } catch (error) {
@@ -95,35 +125,63 @@ const protect = async (req, res, next) => {
         }
 
         if (!token) {
-            return res.status(401).json({ message: 'Not authorized, no token' });
+            return res.status(401).json({
+                success: false,
+                message: 'Not authorized, no token'
+            });
         }
 
         try {
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            console.log('Decoded token in protect middleware:', decoded);
 
             // Get user from token
-            req.user = await User.findById(decoded.id).select('-password');
-            if (!req.user) {
-                return res.status(401).json({ message: 'Not authorized, user not found' });
+            const userId = decoded.id;
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid token format'
+                });
             }
 
-            // Check if token is expired
-            if (decoded.exp && decoded.exp < Date.now() / 1000) {
-                return res.status(401).json({ message: 'Token expired' });
+            // Find user with populated fields if needed
+            req.user = await User.findById(userId).select('-password');
+            if (!req.user) {
+                console.log('User not found for ID:', userId);
+                return res.status(401).json({
+                    success: false,
+                    message: 'Not authorized, user not found'
+                });
             }
 
             // Add subscription status to request
-            req.hasActiveSubscription = req.user.hasActiveSubscription();
+            if (typeof req.user.hasActiveSubscription === 'function') {
+                req.hasActiveSubscription = req.user.hasActiveSubscription();
+            }
 
             next();
         } catch (error) {
-            console.error('Error verifying token:', error);
-            res.status(401).json({ message: 'Not authorized, token failed' });
+            console.error('Error verifying token in protect middleware:', error);
+            if (error.name === 'TokenExpiredError') {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Token expired'
+                });
+            }
+            res.status(401).json({
+                success: false,
+                message: 'Not authorized, token failed',
+                error: error.message
+            });
         }
     } catch (error) {
         console.error('Error in protect middleware:', error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
     }
 };
 

@@ -558,6 +558,25 @@ const Courses = () => {
         setShowSuccess(false);
     };
 
+    const handleDeleteCourse = async (courseId) => {
+        try {
+            if (window.confirm('Are you sure you want to delete this course?')) {
+                await fetch(`http://192.168.219.119:5000/api/courses/${courseId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                setSuccessMessage('Course deleted successfully');
+                setShowSuccess(true);
+                fetchCourses(); // Refresh the course list
+            }
+        } catch (error) {
+            console.error('Error deleting course:', error);
+            setError(error.message || 'Failed to delete course');
+        }
+    };
+
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -687,6 +706,7 @@ const Courses = () => {
                                             <EditIcon />
                                         </IconButton>
                                         <IconButton
+                                            onClick={() => handleDeleteCourse(course._id)}
                                             color="error"
                                             size="small"
                                         >

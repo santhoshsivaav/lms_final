@@ -5,10 +5,16 @@ const Device = require('../models/Device');
 const deviceController = require('./deviceController');
 
 // Generate JWT token
-const generateToken = (userId) => {
-    return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES_IN || '30d',
-    });
+const generateToken = (user) => {
+    return jwt.sign(
+        {
+            id: user._id,
+            email: user.email,
+            role: user.role
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
 };
 
 // Register new user
@@ -76,7 +82,7 @@ const register = async (req, res) => {
         console.log('User after save:', user); // Debug log
 
         // Generate token
-        const token = generateToken(user._id);
+        const token = generateToken(user);
 
         // Populate categories before sending response
         const populatedUser = await User.findById(user._id).populate('preferredCategories');
@@ -144,26 +150,27 @@ const login = async (req, res) => {
         }
 
         // Generate token
-        const token = jwt.sign(
-            { id: user._id, email: user.email, isAdmin: user.isAdmin },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
+        const token = generateToken(user);
 
         res.json({
+            success: true,
             data: {
                 token,
                 user: {
                     id: user._id,
                     name: user.name,
                     email: user.email,
-                    isAdmin: user.isAdmin
+                    role: user.role
                 }
             }
         });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ message: 'Error during login' });
+        res.status(500).json({
+            success: false,
+            message: 'Error during login',
+            error: error.message
+        });
     }
 };
 

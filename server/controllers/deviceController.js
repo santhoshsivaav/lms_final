@@ -3,7 +3,7 @@ const User = require('../models/User');
 const geoip = require('geoip-lite');
 const UAParser = require('ua-parser-js');
 
-const MAX_DEVICES = 2;
+const MAX_DEVICES = 1;
 
 const deviceController = {
     // Get all devices for a user

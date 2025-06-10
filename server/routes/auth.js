@@ -119,7 +119,6 @@ router.post('/register', validateRegistration, async (req, res) => {
 // Login user
 router.post('/login', validateLogin, async (req, res) => {
     try {
-        // Check for validation errors
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
@@ -143,22 +142,27 @@ router.post('/login', validateLogin, async (req, res) => {
         user.lastLogin = new Date();
         await user.save();
 
-        // Create token
+        // Create token with standardized payload
         const token = jwt.sign(
             { id: user._id },
-            process.env.JWT_SECRET || 'your_jwt_secret_key_here',
+            process.env.JWT_SECRET,
             { expiresIn: '30d' }
         );
 
+        console.log('Generated token for user:', { id: user._id, email: user.email });
+
         res.json({
-            token,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                isAdmin: user.isAdmin,
-                isSubscribed: user.hasActiveSubscription()
+            success: true,
+            data: {
+                token,
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    isAdmin: user.isAdmin,
+                    isSubscribed: user.hasActiveSubscription()
+                }
             }
         });
     } catch (err) {

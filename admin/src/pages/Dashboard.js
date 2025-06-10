@@ -206,6 +206,55 @@ const Dashboard = () => {
         }
     };
 
+    const handleDelete = async (userId) => {
+        if (window.confirm('Are you sure you want to delete this user?')) {
+            try {
+                const token = localStorage.getItem('token');
+                console.log('Token from localStorage:', token ? 'Present' : 'Missing');
+
+                if (!token) {
+                    setError('No authentication token found');
+                    navigate('/login');
+                    return;
+                }
+
+                console.log('Making DELETE request to:', `http://192.168.219.119:5000/api/users/${userId}`);
+                const response = await fetch(`http://192.168.219.119:5000/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+
+                if (response.status === 401) {
+                    console.log('Token expired or invalid:', data.message);
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    setError(data.message || 'Session expired. Please login again.');
+                    navigate('/login');
+                    return;
+                }
+
+                if (response.ok) {
+                    // Remove the deleted user from the state
+                    setUsers(users.filter(user => user._id !== userId));
+                    setError('');
+                } else {
+                    setError(data.message || 'Failed to delete user');
+                }
+            } catch (err) {
+                console.error('Error deleting user:', err);
+                setError('An error occurred while deleting the user');
+            }
+        }
+    };
+
     if (loading && value === 0) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -274,7 +323,10 @@ const Dashboard = () => {
                                             >
                                                 <EditIcon />
                                             </IconButton>
-                                            <IconButton color="error">
+                                            <IconButton
+                                                color="error"
+                                                onClick={() => handleDelete(user._id)}
+                                            >
                                                 <DeleteIcon />
                                             </IconButton>
                                         </TableCell>
